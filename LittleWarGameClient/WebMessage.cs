@@ -1,12 +1,15 @@
 ﻿using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 
 namespace LittleWarGameClient
 {
-    public class ButtonPress
+    public class ElementMessage
     {
-        public string? ElementId { get; set; }
-        public string? ElementType { get; set; }
-        public ButtonType? Value { get; set; }
+        public string? Id { get; set; }
+        public string? Value { get; set; }
+
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public ButtonType? Type { get; set; }
     }
 
     public enum ButtonType
@@ -14,6 +17,8 @@ namespace LittleWarGameClient
         [EnumMember(Value = "FullScreen")]
         FullScreen,
         [EnumMember(Value = "Exit")]
-        Exit
+        Exit,
+        [EnumMember(Value = "MouseLock")]
+        MouseLock
     }
 }

@@ -2,9 +2,9 @@
     pressFullScreenButton: function(element) {
         window.chrome.webview.postMessage(
             JSON.stringify({
-                ElementId: element.id,
-                Type: "Button",
-                Value: "FullScreen"
+                Id: element.id,
+                Value: "Toggled",
+                Type: "FullScreen"
             })
         );
     },
@@ -12,9 +12,19 @@
     pressExitButton: function (element) {
         window.chrome.webview.postMessage(
             JSON.stringify({
-                ElementId: element.id,
-                Type: "Button",
-                Value: "Exit"
+                Id: element.id,
+                Value: "Pressed",
+                Type: "Exit"
+            })
+        );
+    },
+
+    pressMouseLockCheckbox: function (element) {
+        window.chrome.webview.postMessage(
+            JSON.stringify({
+                Id: element.id,
+                Value: element.checked.toString(),
+                Type: "MouseLock"
             })
         );
     },
@@ -25,24 +35,25 @@
 
     toggleFriends: function() {
         document.getElementById("friendsButton").click();
-    }
+    },
 
-    //passKey: function (key) {
-    //    var e = jQuery.Event("keydown");
-    //    e.which = Number(key);
-    //    $(document).trigger(e);
-    //}
+    toggleChat: function () {
+        var chat = document.getElementById("ingameChatHistoryButton");
+        if (chat.style.visibility != "hidden") {
+            chat.click();
+        }
+    }
 };
 
 addons.init = {
     function() {
         this.addCustomHotkeysToTitles();
         this.addExitButton();
+        this.replaceMouseLockCheckbox();
         var fullScreenButton = document.getElementById("optionsFullscreenButton");
         fullScreenButton.onclick = function () {
             addons.pressFullScreenButton(this);
         };
-
         console.log("Addons loaded");
     },
 
@@ -67,6 +78,21 @@ addons.init = {
             mainButtonContainer.appendChild(exitButton);
             exitButton.onclick = function () {
                 addons.pressExitButton(this);
+            };
+        }
+    },
+
+    replaceMouseLockCheckbox: function () {
+        var mouseLockId = "mouseLockCheckbox";
+        if (!document.getElementById(mouseLockId)) {
+            var mouseLockCheckbox = document.createElement("input");
+            mouseLockCheckbox.id = mouseLockId;
+            mouseLockCheckbox.type = "checkbox";
+            var lockContainer = document.getElementById("pointerLockLabel");
+            lockContainer.lastChild.remove();
+            lockContainer.appendChild(mouseLockCheckbox);
+            mouseLockCheckbox.onchange = function () {
+                addons.pressMouseLockCheckbox(this);
             };
         }
     }

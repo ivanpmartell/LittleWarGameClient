@@ -38,10 +38,11 @@
             webView.AllowExternalDrop = true;
             webView.CreationProperties = null;
             webView.DefaultBackgroundColor = Color.White;
+            webView.Dock = DockStyle.Fill;
             webView.Location = new Point(0, 0);
             webView.Margin = new Padding(0);
             webView.Name = "webView";
-            webView.Size = new Size(1265, 685);
+            webView.Size = new Size(1264, 681);
             webView.Source = new Uri("https://littlewargame.com/play", UriKind.Absolute);
             webView.TabIndex = 0;
             webView.ZoomFactor = 1D;
@@ -58,6 +59,7 @@
             Icon = (Icon)resources.GetObject("$this.Icon");
             Name = "Form1";
             Text = "Littlewargame";
+            Activated += Form1_Activated;
             Resize += Form1_Resize;
             ((System.ComponentModel.ISupportInitialize)webView).EndInit();
             ResumeLayout(false);

@@ -14,7 +14,7 @@ namespace LittleWarGameClient
         }
         internal void Toggle()
         {
-            if (TargetForm.WindowState == FormWindowState.Maximized)
+            if (TargetForm.WindowState == FormWindowState.Maximized && TargetForm.FormBorderStyle == FormBorderStyle.None)
             {
                 Leave();
             }
@@ -26,7 +26,7 @@ namespace LittleWarGameClient
 
         private void Enter()
         {
-            if (TargetForm.WindowState != FormWindowState.Maximized)
+            if (TargetForm.WindowState != FormWindowState.Maximized || TargetForm.FormBorderStyle != FormBorderStyle.None)
             {
                 PreviousWindowState = TargetForm.WindowState;
                 TargetForm.WindowState = FormWindowState.Normal;

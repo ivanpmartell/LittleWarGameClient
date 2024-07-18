@@ -2,6 +2,7 @@ using Microsoft.Web.WebView2;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Windows.Forms;
 
 namespace LittleWarGameClient
 {
@@ -9,16 +10,34 @@ namespace LittleWarGameClient
     {
         Fullscreen fullScreen;
         KeyboardHandler kbHandler;
+        bool mouseLocked;
         public Form1()
         {
             InitializeComponent();
             fullScreen = new Fullscreen(this);
             kbHandler = new KeyboardHandler(webView, fullScreen);
+            mouseLocked = false;
+        }
+
+        private void CaptureCursor()
+        {
+            if (mouseLocked)
+            {
+                this.Capture = true;
+                var webViewBounds = new Rectangle(webView.PointToScreen(Point.Empty), webView.Size);
+                Cursor.Clip = webViewBounds;
+            }
+            else
+            {
+                this.Capture = false;
+                Cursor.Clip = Rectangle.Empty;
+            }
         }
 
         private void Form1_Resize(object sender, EventArgs e)
         {
             webView.Size = this.ClientSize - new System.Drawing.Size(webView.Location);
+            CaptureCursor();
         }
 
         private void webView_NavigationCompleted(object sender, Microsoft.Web.WebView2.Core.CoreWebView2NavigationCompletedEventArgs e)
@@ -30,20 +49,23 @@ namespace LittleWarGameClient
 
         private void webView_WebMessageReceived(object sender, Microsoft.Web.WebView2.Core.CoreWebView2WebMessageReceivedEventArgs e)
         {
-            var options = new JsonSerializerOptions
+            ElementMessage? msg = JsonSerializer.Deserialize<ElementMessage>(e.TryGetWebMessageAsString());
+            if (msg != null)
             {
-                Converters = { new JsonStringEnumConverter<ButtonType>() }
-            };
-            ButtonPress? button = JsonSerializer.Deserialize<ButtonPress>(e.TryGetWebMessageAsString(), options);
-            if (button != null)
-            {
-                switch (button.Value)
+                switch (msg.Type)
                 {
                     case ButtonType.FullScreen:
                         fullScreen.Toggle();
                         break;
                     case ButtonType.Exit:
                         Application.Exit();
+                        break;
+                    case ButtonType.MouseLock:
+                        if (msg.Value != null && bool.Parse(msg.Value) == true)
+                            mouseLocked = true;
+                        else
+                            mouseLocked = false;
+                        CaptureCursor();
                         break;
                     default:
                         break;
@@ -55,6 +77,11 @@ namespace LittleWarGameClient
         {
             webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
             webView.CoreWebView2.Settings.AreBrowserAcceleratorKeysEnabled = false;
+        }
+
+        private void Form1_Activated(object sender, EventArgs e)
+        {
+            CaptureCursor();
         }
     }
 }

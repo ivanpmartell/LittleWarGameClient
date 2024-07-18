@@ -10,9 +10,7 @@ namespace LittleWarGameClient
         {
             fullScreen = fs;
             webView = wv;
-#if DEBUG
             webView.KeyDown += TargetWebView_KeyDown;
-#endif
             webView.KeyUp += TargetWebView_KeyUp;
         }
 
@@ -34,20 +32,31 @@ namespace LittleWarGameClient
                         CallJSFunc(sender, "toggleMenu");
                     e.Handled = true;
                     break;
+                case Keys.F11:
+                    if (sender != null)
+                        CallJSFunc(sender, "toggleChat");
+                    e.Handled = true;
+                    break;
             }
         }
 
-#if DEBUG
+
         private void TargetWebView_KeyDown(object? sender, KeyEventArgs e)
         {
             switch (e.KeyData)
             {
+#if DEBUG
                 case Keys.F12:
                     webView.CoreWebView2.OpenDevToolsWindow();
                     break;
-            }
-    }
 #endif
+                case Keys.F8:
+                case Keys.F9:
+                case Keys.F10:
+                    e.Handled = true;
+                    break;
+            }
+        }
 
         private void CallJSFunc(object sender, string func, string args = "")
         {
