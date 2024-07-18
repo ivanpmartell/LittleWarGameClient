@@ -18,28 +18,34 @@ namespace LittleWarGameClient
             settings = new Ini(fileName);
         }
 
-        private void CreateDefaultIniFile()
+        private async void CreateDefaultIniFile()
         {
-            var settings = new Ini
+            await Task.Run(() =>
             {
-                new Section("Window")
+                var settings = new Ini
                 {
-                    new Property("width", 1280),
-                    new Property("height", 720),
-                    new Property("fullscreen", false)
-                },
-                new Section("Mouse")
-                {
-                    new Property("lock", false)
-                }
-            };
-            settings.SaveTo(fileName);
+                    new Section("Window")
+                    {
+                        new Property("width", 1280),
+                        new Property("height", 720),
+                        new Property("fullscreen", false)
+                    },
+                    new Section("Mouse")
+                    {
+                        new Property("lock", false)
+                    }
+                };
+                settings.SaveTo(fileName);
+            });
         }
 
-        internal void SetMouseLock(bool value)
+        internal async void SetMouseLock(bool value)
         {
-            settings["Mouse"]["lock"] = value;
-            settings.SaveTo(fileName);
+            await Task.Run(() =>
+            {
+                settings["Mouse"]["lock"] = value;
+                settings.SaveTo(fileName);
+            });
         }
 
         internal bool GetMouseLock()
@@ -47,10 +53,13 @@ namespace LittleWarGameClient
             return settings["Mouse"]["lock"];
         }
 
-        internal void SetFullScreen(bool value)
+        internal async void SetFullScreen(bool value)
         {
-            settings["Window"]["fullscreen"] = value;
-            settings.SaveTo(fileName);
+            await Task.Run(() =>
+            {
+                settings["Window"]["fullscreen"] = value;
+                settings.SaveTo(fileName);
+            });
         }
 
         internal bool GetFullScreen()
@@ -58,11 +67,14 @@ namespace LittleWarGameClient
             return settings["Window"]["fullscreen"];
         }
 
-        internal void SetWindowSize(int width, int height)
+        internal async void SetWindowSize(int width, int height)
         {
-            settings["Window"]["width"] = width;
-            settings["Window"]["height"] = height;
-            settings.SaveTo(fileName);
+            await Task.Run(() =>
+            {
+                settings["Window"]["width"] = width;
+                settings["Window"]["height"] = height;
+                settings.SaveTo(fileName);
+            });
         }
 
         internal Size GetWindowSize()

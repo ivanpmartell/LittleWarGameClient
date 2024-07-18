@@ -14,7 +14,7 @@ namespace LittleWarGameClient
             webView.KeyUp += TargetWebView_KeyUp;
         }
 
-        private void TargetWebView_KeyUp(object? sender, KeyEventArgs e)
+        private async void TargetWebView_KeyUp(object? sender, KeyEventArgs e)
         {
             switch (e.KeyData)
             {
@@ -24,44 +24,46 @@ namespace LittleWarGameClient
                     break;
                 case Keys.F9:
                     if (sender != null)
-                        CallJSFunc(sender, "toggleFriends");
+                        await CallJSFunc(sender, "toggleFriends");
                     e.Handled = true;
                     break;
                 case Keys.F10:
                     if (sender != null)
-                        CallJSFunc(sender, "toggleMenu");
+                        await CallJSFunc(sender, "toggleMenu");
                     e.Handled = true;
                     break;
                 case Keys.F11:
                     if (sender != null)
-                        CallJSFunc(sender, "toggleChat");
+                        await CallJSFunc(sender, "toggleChat");
                     e.Handled = true;
                     break;
             }
         }
 
 
-        private void TargetWebView_KeyDown(object? sender, KeyEventArgs e)
+        private async void TargetWebView_KeyDown(object? sender, KeyEventArgs e)
         {
-            switch (e.KeyData)
-            {
+            await Task.Run(() => {
+                switch (e.KeyData)
+                {
 #if DEBUG
                 case Keys.F12:
                     webView.CoreWebView2.OpenDevToolsWindow();
                     break;
 #endif
-                case Keys.F8:
-                case Keys.F9:
-                case Keys.F10:
-                    e.Handled = true;
-                    break;
-            }
+                    case Keys.F8:
+                    case Keys.F9:
+                    case Keys.F10:
+                        e.Handled = true;
+                        break;
+                }
+            });
         }
 
-        private void CallJSFunc(object sender, string func, string args = "")
+        private async Task CallJSFunc(object sender, string func, string args = "")
         {
             var script = $"addons.{func}({args})";
-            ((WebView2)sender).CoreWebView2.ExecuteScriptAsync(script);
+            await ((WebView2)sender).CoreWebView2.ExecuteScriptAsync(script);
         }
     }
 }
