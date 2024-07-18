@@ -99,5 +99,10 @@ namespace LittleWarGameClient
             CaptureCursor();
             settings.SetWindowSize(this.Width, this.Height);
         }
+
+        private void Form1_Resize(object sender, EventArgs e)
+        {
+            CaptureCursor();
+        }
     }
 }
