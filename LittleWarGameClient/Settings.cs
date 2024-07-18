@@ -18,25 +18,22 @@ namespace LittleWarGameClient
             settings = new Ini(fileName);
         }
 
-        private async void CreateDefaultIniFile()
+        private void CreateDefaultIniFile()
         {
-            await Task.Run(() =>
+            var settings = new Ini
             {
-                var settings = new Ini
+                new Section("Window")
                 {
-                    new Section("Window")
-                    {
-                        new Property("width", 1280),
-                        new Property("height", 720),
-                        new Property("fullscreen", false)
-                    },
-                    new Section("Mouse")
-                    {
-                        new Property("lock", false)
-                    }
-                };
-                settings.SaveTo(fileName);
-            });
+                    new Property("width", 1280),
+                    new Property("height", 720),
+                    new Property("fullscreen", false)
+                },
+                new Section("Mouse")
+                {
+                    new Property("lock", false)
+                }
+            };
+            settings.SaveTo(fileName);
         }
 
         internal async void SetMouseLock(bool value)
