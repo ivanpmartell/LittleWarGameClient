@@ -43,7 +43,6 @@
             webView.Margin = new Padding(0);
             webView.Name = "webView";
             webView.Size = new Size(1264, 681);
-            webView.Source = new Uri("https://littlewargame.com/play", UriKind.Absolute);
             webView.TabIndex = 0;
             webView.ZoomFactor = 1D;
             webView.NavigationStarting += webView_NavigationStarting;

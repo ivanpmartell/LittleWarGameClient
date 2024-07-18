@@ -6,4 +6,4 @@ This project is completely open source. Feel free to fork and make pull requests
 
 # Download
 
-Grab the lwg_client zip file from the releases. Click [here](https://github.com/ivanpmartell/LittleWarGameClient/releases/download/v0.0.3/lwg_client.zip) for easier access to download.
+Grab the `lwg_client.zip` file from the latest release. Click [here](https://github.com/ivanpmartell/LittleWarGameClient/releases/latest) for easier access to the download.

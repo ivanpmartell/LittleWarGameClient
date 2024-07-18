@@ -1,8 +1,10 @@
 using Microsoft.Web.WebView2;
+using Microsoft.Web.WebView2.Core;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows.Forms;
+using System.IO;
 
 namespace LittleWarGameClient
 {
@@ -15,11 +17,20 @@ namespace LittleWarGameClient
         public Form1()
         {
             InitializeComponent();
+            ChangeEnvironment();
             settings = new Settings();
             this.Size = settings.GetWindowSize();
             fullScreen = new Fullscreen(this, settings);
             kbHandler = new KeyboardHandler(webView, fullScreen);
             mouseLocked = settings.GetMouseLock();
+        }
+
+        private async void ChangeEnvironment()
+        {
+            var path = Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath);
+            CoreWebView2Environment env = await CoreWebView2Environment.CreateAsync(null, Path.Join(path, "data"), new CoreWebView2EnvironmentOptions());
+            await webView.EnsureCoreWebView2Async(env);
+            webView.Source = new Uri("https://littlewargame.com/play", UriKind.Absolute);
         }
 
         private void webView_NavigationStarting(object sender, Microsoft.Web.WebView2.Core.CoreWebView2NavigationStartingEventArgs e)
