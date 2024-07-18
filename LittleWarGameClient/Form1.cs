@@ -66,27 +66,27 @@ namespace LittleWarGameClient
         {
             if (mouseLocked)
             {
-                this.Capture = true;
+                webView.Capture = true;
                 var webViewBounds = new Rectangle(webView.PointToScreen(Point.Empty), webView.Size);
                 Cursor.Clip = webViewBounds;
+                Cursor.Current = Cursors.Default;
             }
             else
             {
-                this.Capture = false;
+                webView.Capture = false;
                 Cursor.Clip = Rectangle.Empty;
             }
-        }
-
-        private void Form1_Resize(object sender, EventArgs e)
-        {
-            webView.Size = this.ClientSize - new System.Drawing.Size(webView.Location);
-            CaptureCursor();
-            settings.SetWindowSize(this.Width, this.Height);
         }
 
         private void Form1_Activated(object sender, EventArgs e)
         {
             CaptureCursor();
+        }
+
+        private void Form1_ResizeEnd(object sender, EventArgs e)
+        {
+            CaptureCursor();
+            settings.SetWindowSize(this.Width, this.Height);
         }
     }
 }
