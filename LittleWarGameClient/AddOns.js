@@ -60,7 +60,7 @@ addons.init = {
     addCustomHotkeysToTitles: function () {
         document.getElementById("ingameMenuButton").title = "Options [F10]";
         document.getElementById("friendsButton").title = "Friends & Messages [F9]";
-        document.getElementById("ingameChatHistoryButton").title = "Chat History [F11]"
+        document.getElementById("ingameChatHistoryButton").title = "Chat History [F11]";
     },
 
     addExitButton: function () {
