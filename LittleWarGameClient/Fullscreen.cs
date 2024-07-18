@@ -4,24 +4,35 @@ namespace LittleWarGameClient
 {
     internal class Fullscreen
     {
-        Form TargetForm;
+        readonly Form TargetForm;
+        readonly Settings settings;
 
         FormWindowState PreviousWindowState;
 
-        internal Fullscreen(Form targetForm)
+        internal Fullscreen(Form targetForm, Settings s)
         {
             TargetForm = targetForm;
+            PreviousWindowState = TargetForm.WindowState;
+            settings = s;
+            if (settings.GetFullScreen())
+                Enter();
+            else
+                Leave();
         }
         internal void Toggle()
         {
+            bool state;
             if (TargetForm.WindowState == FormWindowState.Maximized && TargetForm.FormBorderStyle == FormBorderStyle.None)
             {
+                state = false;
                 Leave();
             }
             else
             {
+                state = true;
                 Enter();
             }
+            settings.SetFullScreen(state);
         }
 
         private void Enter()

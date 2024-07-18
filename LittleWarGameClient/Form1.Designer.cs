@@ -37,7 +37,7 @@
             // 
             webView.AllowExternalDrop = true;
             webView.CreationProperties = null;
-            webView.DefaultBackgroundColor = Color.White;
+            webView.DefaultBackgroundColor = Color.Black;
             webView.Dock = DockStyle.Fill;
             webView.Location = new Point(0, 0);
             webView.Margin = new Padding(0);
@@ -54,9 +54,11 @@
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
+            BackColor = Color.Black;
             ClientSize = new Size(1264, 681);
             Controls.Add(webView);
             Icon = (Icon)resources.GetObject("$this.Icon");
+            MinimumSize = new Size(480, 360);
             Name = "Form1";
             Text = "Littlewargame";
             Activated += Form1_Activated;

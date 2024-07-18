@@ -8,15 +8,58 @@ namespace LittleWarGameClient
 {
     public partial class Form1 : Form
     {
-        Fullscreen fullScreen;
-        KeyboardHandler kbHandler;
+        readonly Settings settings;
+        readonly Fullscreen fullScreen;
+        readonly KeyboardHandler kbHandler;
         bool mouseLocked;
         public Form1()
         {
             InitializeComponent();
-            fullScreen = new Fullscreen(this);
+            settings = new Settings();
+            this.Size = settings.GetWindowSize();
+            fullScreen = new Fullscreen(this, settings);
             kbHandler = new KeyboardHandler(webView, fullScreen);
-            mouseLocked = false;
+            mouseLocked = settings.GetMouseLock();
+        }
+
+        private void webView_NavigationStarting(object sender, Microsoft.Web.WebView2.Core.CoreWebView2NavigationStartingEventArgs e)
+        {
+            webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
+            webView.CoreWebView2.Settings.AreBrowserAcceleratorKeysEnabled = false;
+        }
+
+        private void webView_NavigationCompleted(object sender, Microsoft.Web.WebView2.Core.CoreWebView2NavigationCompletedEventArgs e)
+        {
+            string text = System.IO.File.ReadAllText("AddOns.js");
+            webView.CoreWebView2.ExecuteScriptAsync(text);
+            webView.CoreWebView2.ExecuteScriptAsync($"addons.init.function({settings.GetMouseLock().ToString().ToLower()})");
+        }
+
+        private void webView_WebMessageReceived(object sender, Microsoft.Web.WebView2.Core.CoreWebView2WebMessageReceivedEventArgs e)
+        {
+            ElementMessage? msg = JsonSerializer.Deserialize<ElementMessage>(e.TryGetWebMessageAsString());
+            if (msg != null)
+            {
+                switch (msg.Type)
+                {
+                    case ButtonType.FullScreen:
+                        fullScreen.Toggle();
+                        break;
+                    case ButtonType.Exit:
+                        Application.Exit();
+                        break;
+                    case ButtonType.MouseLock:
+                        if (msg.Value != null && bool.Parse(msg.Value) == true)
+                            mouseLocked = true;
+                        else
+                            mouseLocked = false;
+                        settings.SetMouseLock(mouseLocked);
+                        CaptureCursor();
+                        break;
+                    default:
+                        break;
+                }
+            }
         }
 
         private void CaptureCursor()
@@ -38,45 +81,7 @@ namespace LittleWarGameClient
         {
             webView.Size = this.ClientSize - new System.Drawing.Size(webView.Location);
             CaptureCursor();
-        }
-
-        private void webView_NavigationCompleted(object sender, Microsoft.Web.WebView2.Core.CoreWebView2NavigationCompletedEventArgs e)
-        {
-            string text = System.IO.File.ReadAllText("AddOns.js");
-            webView.CoreWebView2.ExecuteScriptAsync(text);
-            webView.CoreWebView2.ExecuteScriptAsync("addons.init.function()");
-        }
-
-        private void webView_WebMessageReceived(object sender, Microsoft.Web.WebView2.Core.CoreWebView2WebMessageReceivedEventArgs e)
-        {
-            ElementMessage? msg = JsonSerializer.Deserialize<ElementMessage>(e.TryGetWebMessageAsString());
-            if (msg != null)
-            {
-                switch (msg.Type)
-                {
-                    case ButtonType.FullScreen:
-                        fullScreen.Toggle();
-                        break;
-                    case ButtonType.Exit:
-                        Application.Exit();
-                        break;
-                    case ButtonType.MouseLock:
-                        if (msg.Value != null && bool.Parse(msg.Value) == true)
-                            mouseLocked = true;
-                        else
-                            mouseLocked = false;
-                        CaptureCursor();
-                        break;
-                    default:
-                        break;
-                }
-            }
-        }
-
-        private void webView_NavigationStarting(object sender, Microsoft.Web.WebView2.Core.CoreWebView2NavigationStartingEventArgs e)
-        {
-            webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
-            webView.CoreWebView2.Settings.AreBrowserAcceleratorKeysEnabled = false;
+            settings.SetWindowSize(this.Width, this.Height);
         }
 
         private void Form1_Activated(object sender, EventArgs e)

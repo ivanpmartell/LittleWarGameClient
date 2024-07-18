@@ -46,10 +46,10 @@
 };
 
 addons.init = {
-    function() {
+    function(mouseLock) {
         this.addCustomHotkeysToTitles();
         this.addExitButton();
-        this.replaceMouseLockCheckbox();
+        this.replaceMouseLockCheckbox(Boolean(mouseLock));
         var fullScreenButton = document.getElementById("optionsFullscreenButton");
         fullScreenButton.onclick = function () {
             addons.pressFullScreenButton(this);
@@ -82,13 +82,15 @@ addons.init = {
         }
     },
 
-    replaceMouseLockCheckbox: function () {
+    replaceMouseLockCheckbox: function (mouseLock) {
         var mouseLockId = "mouseLockCheckbox";
         if (!document.getElementById(mouseLockId)) {
             var mouseLockCheckbox = document.createElement("input");
             mouseLockCheckbox.id = mouseLockId;
             mouseLockCheckbox.type = "checkbox";
+            mouseLockCheckbox.checked = mouseLock;
             var lockContainer = document.getElementById("pointerLockLabel");
+            lockContainer.title = "The mouse pointer will stay locked inside the game screen.";
             lockContainer.lastChild.remove();
             lockContainer.appendChild(mouseLockCheckbox);
             mouseLockCheckbox.onchange = function () {

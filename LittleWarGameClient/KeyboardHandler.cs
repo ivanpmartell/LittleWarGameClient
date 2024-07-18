@@ -4,8 +4,8 @@ namespace LittleWarGameClient
 {
     internal class KeyboardHandler
     {
-        WebView2 webView;
-        Fullscreen fullScreen;
+        readonly WebView2 webView;
+        readonly Fullscreen fullScreen;
         internal KeyboardHandler(WebView2 wv, Fullscreen fs)
         {
             fullScreen = fs;
