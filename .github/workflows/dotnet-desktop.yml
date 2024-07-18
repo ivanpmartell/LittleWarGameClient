@@ -101,8 +101,8 @@ jobs:
     - name: Zip built artifacts
       uses: vimtor/action-zip@v1
       with:
-        files: ${{ env.Wap_Project_Directory }}\bin\${{ env.Configuration }}
-        dest: library.zip
+        files: ${{ env.Wap_Project_Directory }}\bin\${{ env.Configuration }}\net6.0-windows7.0\publish
+        dest: lwg_client.zip
       env:
         Configuration: ${{ matrix.configuration }}
 
@@ -124,6 +124,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: library.zip
-        asset_name: library.zip
+        asset_path: lwg_client.zip
+        asset_name: lwg_client.zip
         asset_content_type: application/zip
