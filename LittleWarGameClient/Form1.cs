@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows.Forms;
 using System.IO;
+using System.Reflection.Metadata;
 
 namespace LittleWarGameClient
 {
@@ -13,6 +14,7 @@ namespace LittleWarGameClient
         readonly Settings settings;
         readonly Fullscreen fullScreen;
         readonly KeyboardHandler kbHandler;
+        readonly VersionHandler vHandler;
         bool mouseLocked;
         public Form1()
         {
@@ -22,6 +24,7 @@ namespace LittleWarGameClient
             this.Size = settings.GetWindowSize();
             fullScreen = new Fullscreen(this, settings);
             kbHandler = new KeyboardHandler(webView, fullScreen);
+            vHandler = new VersionHandler();
             mouseLocked = settings.GetMouseLock();
         }
 
@@ -41,9 +44,9 @@ namespace LittleWarGameClient
 
         private void webView_NavigationCompleted(object sender, Microsoft.Web.WebView2.Core.CoreWebView2NavigationCompletedEventArgs e)
         {
-            string text = System.IO.File.ReadAllText("AddOns.js");
-            webView.CoreWebView2.ExecuteScriptAsync(text);
-            webView.CoreWebView2.ExecuteScriptAsync($"addons.init.function({settings.GetMouseLock().ToString().ToLower()})");
+            var addOnJS = System.IO.File.ReadAllText("AddOns.js");
+            webView.CoreWebView2.ExecuteScriptAsync(addOnJS);
+            ElementMessage.CallJSFunc(webView, $"init.function", $"{settings.GetMouseLock().ToString().ToLower()}, \"{vHandler.CurrentVersion}\"");
         }
 
         private void webView_WebMessageReceived(object sender, Microsoft.Web.WebView2.Core.CoreWebView2WebMessageReceivedEventArgs e)

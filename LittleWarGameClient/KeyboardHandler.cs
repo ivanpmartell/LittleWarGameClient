@@ -24,17 +24,17 @@ namespace LittleWarGameClient
                     break;
                 case Keys.F9:
                     if (sender != null)
-                        CallJSFunc(sender, "toggleFriends");
+                        ElementMessage.CallJSFunc((WebView2)sender, "toggleFriends");
                     e.Handled = true;
                     break;
                 case Keys.F10:
                     if (sender != null)
-                        CallJSFunc(sender, "toggleMenu");
+                        ElementMessage.CallJSFunc((WebView2)sender, "toggleMenu");
                     e.Handled = true;
                     break;
                 case Keys.F11:
                     if (sender != null)
-                        CallJSFunc(sender, "toggleChat");
+                        ElementMessage.CallJSFunc((WebView2)sender, "toggleChat");
                     e.Handled = true;
                     break;
             }
@@ -43,14 +43,17 @@ namespace LittleWarGameClient
 
         private async void TargetWebView_KeyDown(object? sender, KeyEventArgs e)
         {
+#if DEBUG
+            if (e.KeyData == Keys.F12)
+            {
+                webView.CoreWebView2.OpenDevToolsWindow();
+                e.Handled = true;
+                return;
+            }
+#endif
             await Task.Run(() => {
                 switch (e.KeyData)
                 {
-#if DEBUG
-                case Keys.F12:
-                    webView.CoreWebView2.OpenDevToolsWindow();
-                    break;
-#endif
                     case Keys.F8:
                     case Keys.F9:
                     case Keys.F10:
@@ -59,12 +62,6 @@ namespace LittleWarGameClient
                         break;
                 }
             });
-        }
-
-        private async void CallJSFunc(object sender, string func, string args = "")
-        {
-            var script = $"addons.{func}({args})";
-            await ((WebView2)sender).CoreWebView2.ExecuteScriptAsync(script);
         }
     }
 }

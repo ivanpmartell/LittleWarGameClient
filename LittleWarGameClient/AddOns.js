@@ -46,10 +46,11 @@
 };
 
 addons.init = {
-    function(mouseLock) {
-        this.addCustomHotkeysToTitles();
+    function(mouseLock, clientVersion) {
         this.addExitButton();
-        this.replaceMouseLockCheckbox(Boolean(mouseLock));
+        this.addClientVersion(clientVersion);
+        this.addCustomHotkeysToTitles();
+        this.replaceMouseLockCheckbox(mouseLock);
         var fullScreenButton = document.getElementById("optionsFullscreenButton");
         fullScreenButton.onclick = function () {
             addons.pressFullScreenButton(this);
@@ -57,10 +58,19 @@ addons.init = {
         console.log("Addons loaded");
     },
 
+    addClientVersion: function (clientVersion) {
+        var options = document.getElementById("optionsWindow");
+        var title = options.getElementsByTagName('h2')[0];
+        title.innerText = `${title.innerText} [Client v${clientVersion}]`;
+    },
+
     addCustomHotkeysToTitles: function () {
-        document.getElementById("ingameMenuButton").title = "Options [F10]";
-        document.getElementById("friendsButton").title = "Friends & Messages [F9]";
-        document.getElementById("ingameChatHistoryButton").title = "Chat History [F11]";
+        var menuButton = document.getElementById("ingameMenuButton");
+        menuButton.title = `${menuButton.title} [F10]`;
+        var friendsButton = document.getElementById("friendsButton");
+        friendsButton.title = `${friendsButton.title} [F9]`;
+        var chatHistoryButton = document.getElementById("ingameChatHistoryButton");
+        chatHistoryButton.title = `${chatHistoryButton.title} [F11]`;
     },
 
     addExitButton: function () {

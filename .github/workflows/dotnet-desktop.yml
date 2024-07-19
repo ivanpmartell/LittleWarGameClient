@@ -95,7 +95,7 @@ jobs:
 
     # Create the app package by building and packaging the Windows Application Packaging project
     - name: Create the app package
-      run: dotnet publish $env:Solution_Name -c $env:Configuration /p:Version=${{ steps.tag_version.outputs.new_tag }} /p:AssemblyVersion=${{ steps.tag_version.outputs.new_tag }}
+      run: dotnet publish $env:Solution_Name -c $env:Configuration /p:Version=${{ steps.tag_version.outputs.new_version }} /p:AssemblyVersion=${{ steps.tag_version.outputs.new_version }}
       env:
         Configuration: ${{ matrix.configuration }}
 
