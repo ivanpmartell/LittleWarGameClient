@@ -47,21 +47,21 @@ namespace LittleWarGameClient
 
         internal virtual void CheckForUpdate(object? sender, EventArgs e)
         {
-            settings.SetLastUpdated(DateTime.Now.Date);
             if (LatestVersion != null && RequiresUpdate())
-                if (DialogResult.OK == MessageBox.Show("An update is available. Press OK to download it", "Update", MessageBoxButtons.OKCancel))
+                if (DialogResult.OK == MessageBox.Show("An update is available. Press OK to download it and exit the game", "Update", MessageBoxButtons.OKCancel))
                 {
-                    Process.Start(new ProcessStartInfo($"https://github.com/ivanpmartell/LittleWarGameClient/releases/tag/v{LatestVersion}") { UseShellExecute = true });
+                    Process.Start(new ProcessStartInfo($"https://github.com/ivanpmartell/LittleWarGameClient/releases/download/v{LatestVersion}/lwg_client.zip") { UseShellExecute = true });
+                    System.Windows.Forms.Application.Exit();
                 }
-                    
+            settings.SetLastUpdateChecked(DateTime.Now.Date);
         }
 
         private bool RequiresUpdate()
         {
-            var lastChecked = settings.GetLastUpdated();
+            var lastChecked = settings.GetLastUpdateChecked();
             var interval = settings.GetUpdateInterval();
             var dateToCheckForUpdates =lastChecked.AddDays(interval);
-            if (DateTime.Now > dateToCheckForUpdates)
+            if (DateTime.Now < dateToCheckForUpdates)
                 return false;
             int versionComparison = CurrentVersion.CompareTo(LatestVersion);
             if (versionComparison < 0)

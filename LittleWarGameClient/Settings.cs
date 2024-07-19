@@ -35,7 +35,7 @@ namespace LittleWarGameClient
                 new Section("Update")
                 {
                     new Property("lastChecked", DateTime.MinValue),
-                    new Property("interval", 7),
+                    new Property("interval", 1),
                 }
             };
             settings.SaveTo(fileName);
@@ -86,7 +86,7 @@ namespace LittleWarGameClient
             return new Size(width, height);
         }
 
-        internal async void SetLastUpdated(DateTime value)
+        internal async void SetLastUpdateChecked(DateTime value)
         {
             await Task.Run(() =>
             {
@@ -95,7 +95,7 @@ namespace LittleWarGameClient
             });
         }
 
-        internal DateTime GetLastUpdated()
+        internal DateTime GetLastUpdateChecked()
         {
             return settings["Update"]["lastChecked"];
         }
