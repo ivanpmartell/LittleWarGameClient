@@ -31,6 +31,11 @@ namespace LittleWarGameClient
                 new Section("Mouse")
                 {
                     new Property("lock", false)
+                },
+                new Section("Update")
+                {
+                    new Property("lastChecked", DateTime.MinValue),
+                    new Property("interval", 7),
                 }
             };
             settings.SaveTo(fileName);
@@ -79,6 +84,34 @@ namespace LittleWarGameClient
             int width = settings["Window"]["width"];
             int height = settings["Window"]["height"];
             return new Size(width, height);
+        }
+
+        internal async void SetLastUpdated(DateTime value)
+        {
+            await Task.Run(() =>
+            {
+                settings["Update"]["lastChecked"] = value;
+                settings.SaveTo(fileName);
+            });
+        }
+
+        internal DateTime GetLastUpdated()
+        {
+            return settings["Update"]["lastChecked"];
+        }
+
+        internal async void SetUpdateInterval(int value)
+        {
+            await Task.Run(() =>
+            {
+                settings["Update"]["interval"] = value;
+                settings.SaveTo(fileName);
+            });
+        }
+
+        internal int GetUpdateInterval()
+        {
+            return settings["Update"]["interval"];
         }
     }
 }

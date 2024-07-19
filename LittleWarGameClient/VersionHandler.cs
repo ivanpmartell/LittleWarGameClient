@@ -15,6 +15,7 @@ namespace LittleWarGameClient
 {
     internal class VersionHandler
     {
+        readonly Settings settings;
         internal Version CurrentVersion { get; private set; }
         private Version? latestVersion;
         internal Version? LatestVersion
@@ -35,8 +36,9 @@ namespace LittleWarGameClient
 
         public event EventHandler LatestVersionObtained;
 
-        public VersionHandler()
+        public VersionHandler(Settings s)
         {
+            settings = s;
             var productVersion = System.Windows.Forms.Application.ProductVersion.Split('+').First();
             CurrentVersion = new Version(productVersion);
             TryGetLatestVersionAsync();
@@ -45,13 +47,22 @@ namespace LittleWarGameClient
 
         internal virtual void CheckForUpdate(object? sender, EventArgs e)
         {
+            settings.SetLastUpdated(DateTime.Now.Date);
             if (LatestVersion != null && RequiresUpdate())
                 if (DialogResult.OK == MessageBox.Show("An update is available. Press OK to download it", "Update", MessageBoxButtons.OKCancel))
+                {
                     Process.Start(new ProcessStartInfo($"https://github.com/ivanpmartell/LittleWarGameClient/releases/tag/v{LatestVersion}") { UseShellExecute = true });
+                }
+                    
         }
 
         private bool RequiresUpdate()
         {
+            var lastChecked = settings.GetLastUpdated();
+            var interval = settings.GetUpdateInterval();
+            var dateToCheckForUpdates =lastChecked.AddDays(interval);
+            if (DateTime.Now > dateToCheckForUpdates)
+                return false;
             int versionComparison = CurrentVersion.CompareTo(LatestVersion);
             if (versionComparison < 0)
                 return true;

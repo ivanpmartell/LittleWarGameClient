@@ -15,6 +15,8 @@ namespace LittleWarGameClient
         readonly Fullscreen fullScreen;
         readonly KeyboardHandler kbHandler;
         readonly VersionHandler vHandler;
+        bool wasSmallWindow = false;
+        bool gameHasLoaded = false;
         bool mouseLocked;
         public Form1()
         {
@@ -24,7 +26,7 @@ namespace LittleWarGameClient
             this.Size = settings.GetWindowSize();
             fullScreen = new Fullscreen(this, settings);
             kbHandler = new KeyboardHandler(webView, fullScreen);
-            vHandler = new VersionHandler();
+            vHandler = new VersionHandler(settings);
             mouseLocked = settings.GetMouseLock();
         }
 
@@ -47,6 +49,8 @@ namespace LittleWarGameClient
             var addOnJS = System.IO.File.ReadAllText("AddOns.js");
             webView.CoreWebView2.ExecuteScriptAsync(addOnJS);
             ElementMessage.CallJSFunc(webView, $"init.function", $"{settings.GetMouseLock().ToString().ToLower()}, \"{vHandler.CurrentVersion}\"");
+            gameHasLoaded = true;
+            ResizeGameWindows();
         }
 
         private void webView_WebMessageReceived(object sender, Microsoft.Web.WebView2.Core.CoreWebView2WebMessageReceivedEventArgs e)
@@ -95,6 +99,7 @@ namespace LittleWarGameClient
         private void Form1_Activated(object sender, EventArgs e)
         {
             CaptureCursor();
+            ResizeGameWindows();
         }
 
         private void Form1_ResizeEnd(object sender, EventArgs e)
@@ -106,6 +111,24 @@ namespace LittleWarGameClient
         private void Form1_Resize(object sender, EventArgs e)
         {
             CaptureCursor();
+            ResizeGameWindows();
+        }
+
+        private void ResizeGameWindows()
+        {
+            if (gameHasLoaded)
+            {
+                if (this.Height <= 800 && !wasSmallWindow)
+                {
+                    wasSmallWindow = true;
+                    ElementMessage.CallJSFunc(webView, "setSmallWindowSizes");
+                }
+                else if (this.Height > 800 && wasSmallWindow)
+                {
+                    wasSmallWindow = false;
+                    ElementMessage.CallJSFunc(webView, "setNormalWindowSizes");
+                }
+            }
         }
     }
 }

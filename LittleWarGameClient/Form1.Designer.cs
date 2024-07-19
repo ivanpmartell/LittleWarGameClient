@@ -57,7 +57,7 @@
             ClientSize = new Size(1264, 681);
             Controls.Add(webView);
             Icon = (Icon)resources.GetObject("$this.Icon");
-            MinimumSize = new Size(480, 360);
+            MinimumSize = new Size(1280, 720);
             Name = "Form1";
             Text = "Littlewargame";
             Activated += Form1_Activated;

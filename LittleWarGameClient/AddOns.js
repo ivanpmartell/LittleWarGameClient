@@ -42,6 +42,40 @@
         if (chat.style.visibility != "hidden") {
             chat.click();
         }
+    },
+
+    setSmallWindowSizes: function () {
+        this.setElement("optionsWindow", "height: 600px;");
+        this.setElement("queriesWindow", "height: 600px;");
+        this.setElement("optionsChecklistDiv", "height: 405px;");
+        this.setElement("optionsQuitButton", "margin-top: 3px;");
+        this.setElement("startButton", "top: 600px;");
+        this.setElement("backButton", "top: 600px;");
+    },
+
+    setNormalWindowSizes: function () {
+        this.resetElement("optionsWindow", "height:");
+        this.resetElement("queriesWindow", "height:");
+        this.resetElement("optionsChecklistDiv", "height:");
+        this.resetElement("optionsQuitButton", "margin-top:");
+        this.resetElement("startButton", "top:");
+        this.resetElement("backButton", "top:");
+    },
+
+    resetElement: function (elementName, styleProperty) {
+        var element = document.getElementById(elementName);
+        var smallIdx = element.style.cssText.indexOf(styleProperty)
+        if (smallIdx != -1) {
+            element.style.cssText = element.style.cssText.substring(0, smallIdx)
+        }
+    },
+
+    setElement: function (elementName, styleProperty) {
+        var element = document.getElementById(elementName);
+        var smallIdx = element.style.cssText.indexOf(styleProperty)
+        if (smallIdx == -1) {
+            element.style.cssText += styleProperty;
+        }
     }
 };
 
