@@ -55,7 +55,7 @@ namespace LittleWarGameClient
             int versionComparison = CurrentVersion.CompareTo(LatestVersion);
             if (versionComparison < 0)
                 return true;
-            return true;
+            return false;
         }
 
         private async void TryGetLatestVersionAsync()
