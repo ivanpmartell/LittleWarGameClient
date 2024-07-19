@@ -41,7 +41,7 @@ namespace LittleWarGameClient
         }
 
 
-        private async void TargetWebView_KeyDown(object? sender, KeyEventArgs e)
+        private void TargetWebView_KeyDown(object? sender, KeyEventArgs e)
         {
 #if DEBUG
             if (e.KeyData == Keys.F12)
@@ -51,17 +51,15 @@ namespace LittleWarGameClient
                 return;
             }
 #endif
-            await Task.Run(() => {
-                switch (e.KeyData)
-                {
-                    case Keys.F8:
-                    case Keys.F9:
-                    case Keys.F10:
-                    case Keys.F11:
-                        e.Handled = true;
-                        break;
-                }
-            });
+            switch (e.KeyData)
+            {
+                case Keys.F8:
+                case Keys.F9:
+                case Keys.F10:
+                case Keys.F11:
+                    e.Handled = true;
+                    break;
+            }
         }
     }
 }
