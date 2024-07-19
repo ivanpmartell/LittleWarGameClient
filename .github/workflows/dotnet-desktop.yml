@@ -71,6 +71,7 @@ jobs:
       uses: mathieudutour/github-tag-action@v6.0
       with:
         github_token: ${{ secrets.TOKEN }}
+        default_bump: patch
 
     # Install the .NET Core workload
     - name: Install .NET Core
@@ -94,7 +95,7 @@ jobs:
 
     # Create the app package by building and packaging the Windows Application Packaging project
     - name: Create the app package
-      run: dotnet publish $env:Solution_Name -c $env:Configuration
+      run: dotnet publish $env:Solution_Name -c $env:Configuration /p:Version=${{ steps.tag_version.outputs.new_tag }} /p:AssemblyVersion=${{ steps.tag_version.outputs.new_tag }}
       env:
         Configuration: ${{ matrix.configuration }}
 
