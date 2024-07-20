@@ -27,8 +27,9 @@ namespace LittleWarGameClient
         public Settings()
         {
             if (!File.Exists(fileName))
-                CreateDefaultIniFile();
-            settings = new Ini(fileName);
+                settings = CreateDefaultIniFile();
+            else
+                settings = new Ini(fileName);
             helper = new SettingsHelper(settings);
             Init();
         }
@@ -47,7 +48,7 @@ namespace LittleWarGameClient
             Save();
         }
 
-        private void CreateDefaultIniFile()
+        private Ini CreateDefaultIniFile()
         {
             var settings = new Ini
             {
@@ -74,7 +75,7 @@ namespace LittleWarGameClient
                     new Property("fullscreen", defaultFullscreenHotkey.ToString())
                 }
             };
-            Save();
+            return settings;
         }
 
         internal void Save()
