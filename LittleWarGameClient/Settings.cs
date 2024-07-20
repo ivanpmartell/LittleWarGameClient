@@ -5,7 +5,6 @@ using System.Linq;
 using System.Reflection.Metadata;
 using System.Text;
 using System.Threading.Tasks;
-using System.Windows.Forms;
 
 namespace LittleWarGameClient
 {
@@ -83,13 +82,13 @@ namespace LittleWarGameClient
             settings.SaveTo(fileName);
         }
 
-        /*internal async void SaveAsync()
+        internal async void SaveAsync()
         {
             using (FileStream stream = new FileStream(fileName, FileMode.Create, FileAccess.Write, FileShare.None, 4096, true))
             {
                 await settings.SaveToAsync(stream);
             }
-        }*/
+        }
 
         internal void SetMouseLock(bool value)
         {

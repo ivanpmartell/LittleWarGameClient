@@ -54,7 +54,7 @@ namespace LittleWarGameClient
                     System.Windows.Forms.Application.Exit();
                 }
             settings.SetLastUpdateChecked(DateTime.Now.Date);
-            settings.Save();
+            settings.SaveAsync();
         }
 
         private bool RequiresUpdate()

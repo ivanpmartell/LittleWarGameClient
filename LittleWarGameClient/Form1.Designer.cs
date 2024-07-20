@@ -61,7 +61,6 @@
             Name = "Form1";
             Text = "Littlewargame";
             Activated += Form1_Activated;
-            FormClosing += Form1_FormClosing;
             ResizeEnd += Form1_ResizeEnd;
             Resize += Form1_Resize;
             ((System.ComponentModel.ISupportInitialize)webView).EndInit();
