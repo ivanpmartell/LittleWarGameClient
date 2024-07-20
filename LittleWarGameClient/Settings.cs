@@ -43,6 +43,8 @@ namespace LittleWarGameClient
             SetUpdateInterval(GetUpdateInterval());
             SetOptionsMenuHotkey(GetOptionsMenuHotkey());
             SetFriendsMenuHotkey(GetFriendsMenuHotkey());
+            SetChatHistoryMenuHotkey(GetChatHistoryMenuHotkey());
+            SetFullscreenHotkey(GetFullscreenHotkey());
             Save();
         }
 
@@ -78,18 +80,25 @@ namespace LittleWarGameClient
 
         internal void Save()
         {
-            for (int numTries = 0; numTries < 5; numTries++)
-            {
-                try
+            settings.SaveTo(fileName);
+        }
+
+        internal async void SaveAsync()
+        {
+            await Task.Run(() => {
+                for (int numTries = 0; numTries < 5; numTries++)
                 {
-                    settings.SaveTo(fileName);
-                    break;
+                    try
+                    {
+                        settings.SaveTo(fileName);
+                        break;
+                    }
+                    catch
+                    {
+                        Thread.Sleep(50);
+                    }
                 }
-                catch
-                {
-                    Thread.Sleep(50);
-                }
-            }
+            });
         }
 
         internal void SetMouseLock(bool value)

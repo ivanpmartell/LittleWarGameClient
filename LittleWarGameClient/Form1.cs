@@ -74,7 +74,7 @@ namespace LittleWarGameClient
                         else
                             mouseLocked = false;
                         settings.SetMouseLock(mouseLocked);
-                        settings.Save();
+                        settings.SaveAsync();
                         CaptureCursor();
                         break;
                     default:
@@ -109,7 +109,7 @@ namespace LittleWarGameClient
         {
             CaptureCursor();
             settings.SetWindowSize(this.Size);
-            settings.Save();
+            settings.SaveAsync();
         }
 
         private void Form1_Resize(object sender, EventArgs e)
@@ -133,6 +133,11 @@ namespace LittleWarGameClient
                     ElementMessage.CallJSFunc(webView, "setNormalWindowSizes");
                 }
             }
+        }
+
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            settings.Save();
         }
     }
 }
