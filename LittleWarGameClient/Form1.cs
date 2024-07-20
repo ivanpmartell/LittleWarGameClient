@@ -74,7 +74,7 @@ namespace LittleWarGameClient
                         else
                             mouseLocked = false;
                         settings.SetMouseLock(mouseLocked);
-                        settings.SaveAsync();
+                        settings.Save();
                         CaptureCursor();
                         break;
                     default:
@@ -109,7 +109,7 @@ namespace LittleWarGameClient
         {
             CaptureCursor();
             settings.SetWindowSize(this.Size);
-            settings.SaveAsync();
+            settings.Save();
         }
 
         private void Form1_Resize(object sender, EventArgs e)

@@ -83,7 +83,8 @@ namespace LittleWarGameClient
             settings.SaveTo(fileName);
         }
 
-        internal async void SaveAsync()
+        //This somehow triggers Windows Defender as a Trojan???
+        /*internal async void SaveAsync()
         {
             await Task.Run(() => {
                 for (int numTries = 0; numTries < 5; numTries++)
@@ -99,7 +100,7 @@ namespace LittleWarGameClient
                     }
                 }
             });
-        }
+        }*/
 
         internal void SetMouseLock(bool value)
         {
