@@ -1,11 +1,11 @@
 ﻿using IniFile;
-using Octokit;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Metadata;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace LittleWarGameClient
 {
@@ -75,7 +75,7 @@ namespace LittleWarGameClient
                     new Property("fullscreen", defaultFullscreenHotkey.ToString())
                 }
             };
-            settings.SaveTo(fileName);
+            Save();
         }
 
         internal void Save()
@@ -83,24 +83,13 @@ namespace LittleWarGameClient
             settings.SaveTo(fileName);
         }
 
-        //This somehow triggers Windows Defender as a Trojan???
-        /*internal async void SaveAsync()
+        internal async void SaveAsync()
         {
-            await Task.Run(() => {
-                for (int numTries = 0; numTries < 5; numTries++)
-                {
-                    try
-                    {
-                        settings.SaveTo(fileName);
-                        break;
-                    }
-                    catch
-                    {
-                        Thread.Sleep(50);
-                    }
-                }
-            });
-        }*/
+            using (FileStream stream = new FileStream(fileName, FileMode.Create, FileAccess.Write, FileShare.None, 4096, true))
+            {
+                await settings.SaveToAsync(stream);
+            }
+        }
 
         internal void SetMouseLock(bool value)
         {
