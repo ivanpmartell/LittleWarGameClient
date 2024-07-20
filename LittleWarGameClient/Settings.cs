@@ -45,7 +45,7 @@ namespace LittleWarGameClient
             SetFriendsMenuHotkey(GetFriendsMenuHotkey());
             SetChatHistoryMenuHotkey(GetChatHistoryMenuHotkey());
             SetFullscreenHotkey(GetFullscreenHotkey());
-            Save();
+            SaveAsync();
         }
 
         private Ini CreateDefaultIniFile()
