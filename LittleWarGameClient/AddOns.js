@@ -29,6 +29,17 @@
         );
     },
 
+    fakeClick: function (anchorObj) {
+        if (anchorObj.click) {
+            anchorObj.click()
+        } else if (document.createEvent) {
+            var event = new MouseEvent('click', {
+                'view': window
+            });
+            anchorObj.dispatchEvent(evt);
+        }
+    },
+
     toggleMenu: function() {
         document.getElementById("ingameMenuButton").click();
     },
@@ -122,7 +133,20 @@ addons.init = {
         fullScreenButton.onclick = function () {
             addons.pressFullScreenButton(this);
         };
+        this.addClientMadeBy();
         console.log("Addons loaded");
+    },
+
+    addClientMadeBy: function () {
+        var imprintLink = document.getElementById("imprintLink");
+        imprintLink.onclick = function () {
+            var breakElement = document.createElement("br");
+            var divElement = document.createElement("div");
+            divElement.innerHTML = "Windows client made by SunNoise<br>© 2024";
+            var imprint = document.getElementById("addScrollableSubDivTextArea2");
+            imprint.appendChild(breakElement);
+            imprint.appendChild(divElement);
+        };
     },
 
     addClientVersion: function (clientVersion) {
