@@ -33,6 +33,7 @@ namespace LittleWarGameClient
                 Enter();
             }
             settings.SetFullScreen(state);
+            settings.Save();
         }
 
         private void Enter()

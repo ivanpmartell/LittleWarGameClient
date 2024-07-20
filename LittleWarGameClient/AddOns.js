@@ -44,6 +44,22 @@
         }
     },
 
+    addOptionsMenuHotkey: function (hotkey) {
+        this.addCustomHotkeyToTitle("ingameMenuButton", hotkey);
+    },
+
+    addFriendsMenuHotkey: function (hotkey) {
+        this.addCustomHotkeyToTitle("friendsButton", hotkey);
+    },
+
+    addChatHistoryHotkey: function (hotkey) {
+        this.addCustomHotkeyToTitle("ingameChatHistoryButton", hotkey);
+    },
+
+    addFullscreenBtnHotkey: function (hotkey) {
+        this.addCustomHotkeyToInnerText("optionsFullscreenButton", hotkey);
+    },
+
     setSmallWindowSizes: function () {
         this.setElement("optionsWindow", "height: 600px;");
         this.setElement("queriesWindow", "height: 600px;");
@@ -76,6 +92,24 @@
         if (smallIdx == -1) {
             element.style.cssText += styleProperty;
         }
+    },
+
+    addCustomHotkeyToTitle: function (elementId, hotkey) {
+        var element = document.getElementById(elementId);
+        var hotkeyIdx = element.title.indexOf('[')
+        if (hotkeyIdx != -1) {
+            element.title = element.title.substring(0, hotkeyIdx).trim();
+        }
+        element.title = `${element.title} [${hotkey}]`;
+    },
+
+    addCustomHotkeyToInnerText: function (elementId, hotkey) {
+        var element = document.getElementById(elementId);
+        var hotkeyIdx = element.innerText.indexOf('[')
+        if (hotkeyIdx != -1) {
+            element.innerText = element.innerText.substring(0, hotkeyIdx).trim();
+        }
+        element.innerText = `${element.innerText} [${hotkey}]`;
     }
 };
 
@@ -83,7 +117,6 @@ addons.init = {
     function(mouseLock, clientVersion) {
         this.addExitButton();
         this.addClientVersion(clientVersion);
-        this.addCustomHotkeysToTitles();
         this.replaceMouseLockCheckbox(mouseLock);
         var fullScreenButton = document.getElementById("optionsFullscreenButton");
         fullScreenButton.onclick = function () {
@@ -96,15 +129,6 @@ addons.init = {
         var options = document.getElementById("optionsWindow");
         var title = options.getElementsByTagName('h2')[0];
         title.innerText = `${title.innerText} [Client v${clientVersion}]`;
-    },
-
-    addCustomHotkeysToTitles: function () {
-        var menuButton = document.getElementById("ingameMenuButton");
-        menuButton.title = `${menuButton.title} [F10]`;
-        var friendsButton = document.getElementById("friendsButton");
-        friendsButton.title = `${friendsButton.title} [F9]`;
-        var chatHistoryButton = document.getElementById("ingameChatHistoryButton");
-        chatHistoryButton.title = `${chatHistoryButton.title} [F11]`;
     },
 
     addExitButton: function () {

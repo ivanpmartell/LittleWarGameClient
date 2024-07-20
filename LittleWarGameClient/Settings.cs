@@ -1,7 +1,9 @@
 ﻿using IniFile;
+using Octokit;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Metadata;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -10,12 +12,38 @@ namespace LittleWarGameClient
     internal class Settings
     {
         private const string fileName = "Settings.ini";
+        private const int defaultWidth = 1280;
+        private const int defaultHeight = 720;
+        private const bool defaultFullscreen = false;
+        private const bool defaultMouseLock = false;
+        private const int defaultUpdateInterval = 1;
+        private readonly DateTime defaultUpdateLastChecked = DateTime.MinValue;
+        private const Keys defaultOptionsMenu = Keys.F10;
+        private const Keys defaultFriendsMenu = Keys.F9;
+        private const Keys defaultChatHistoryMenu = Keys.F11;
+        private const Keys defaultFullscreenHotkey = Keys.F8;
         private readonly Ini settings;
+        private readonly SettingsHelper helper;
+
         public Settings()
         {
             if (!File.Exists(fileName))
                 CreateDefaultIniFile();
             settings = new Ini(fileName);
+            helper = new SettingsHelper(settings);
+            Init();
+        }
+
+        private void Init()
+        {
+            SetMouseLock(GetMouseLock());
+            SetFullScreen(GetFullScreen());
+            SetWindowSize(GetWindowSize());
+            SetLastUpdateChecked(GetLastUpdateChecked());
+            SetUpdateInterval(GetUpdateInterval());
+            SetOptionsMenuHotkey(GetOptionsMenuHotkey());
+            SetFriendsMenuHotkey(GetFriendsMenuHotkey());
+            Save();
         }
 
         private void CreateDefaultIniFile()
@@ -24,94 +52,147 @@ namespace LittleWarGameClient
             {
                 new Section("Window")
                 {
-                    new Property("width", 1280),
-                    new Property("height", 720),
-                    new Property("fullscreen", false)
+                    new Property("width", defaultWidth),
+                    new Property("height", defaultHeight),
+                    new Property("fullscreen", defaultFullscreen)
                 },
                 new Section("Mouse")
                 {
-                    new Property("lock", false)
+                    new Property("lock", defaultMouseLock)
                 },
                 new Section("Update")
                 {
-                    new Property("lastChecked", DateTime.MinValue),
-                    new Property("interval", 1),
+                    new Property("lastChecked", defaultUpdateLastChecked),
+                    new Property("interval", defaultUpdateInterval),
+                },
+                new Section("Hotkeys")
+                {
+                    new Property("optionsMenu", defaultOptionsMenu.ToString()),
+                    new Property("friendsMenu", defaultFriendsMenu.ToString()),
+                    new Property("chatHistoryMenu", defaultChatHistoryMenu.ToString()),
+                    new Property("fullscreen", defaultFullscreenHotkey.ToString())
                 }
             };
             settings.SaveTo(fileName);
         }
 
-        internal async void SetMouseLock(bool value)
+        internal void Save()
         {
-            await Task.Run(() =>
+            for (int numTries = 0; numTries < 5; numTries++)
             {
-                settings["Mouse"]["lock"] = value;
-                settings.SaveTo(fileName);
-            });
+                try
+                {
+                    settings.SaveTo(fileName);
+                    break;
+                }
+                catch
+                {
+                    Thread.Sleep(50);
+                }
+            }
         }
 
-        internal bool GetMouseLock()
+        internal void SetMouseLock(bool value)
         {
-            return settings["Mouse"]["lock"];
+            helper.SetVariable("Mouse", "lock", value);
         }
 
-        internal async void SetFullScreen(bool value)
+        public bool GetMouseLock()
         {
-            await Task.Run(() =>
-            {
-                settings["Window"]["fullscreen"] = value;
-                settings.SaveTo(fileName);
-            });
+            return helper.GetVariable("Mouse", "lock", defaultMouseLock);
         }
 
-        internal bool GetFullScreen()
+        internal void SetFullScreen(bool value)
         {
-            return settings["Window"]["fullscreen"];
+            helper.SetVariable("Window", "fullscreen", value);
         }
 
-        internal async void SetWindowSize(int width, int height)
+        public bool GetFullScreen()
         {
-            await Task.Run(() =>
-            {
-                settings["Window"]["width"] = width;
-                settings["Window"]["height"] = height;
-                settings.SaveTo(fileName);
-            });
+            return helper.GetVariable("Window", "fullscreen", defaultFullscreen);
         }
 
-        internal Size GetWindowSize()
+        internal void SetWindowSize(Size size)
         {
-            int width = settings["Window"]["width"];
-            int height = settings["Window"]["height"];
+            helper.SetVariable("Window", "width", size.Width);
+            helper.SetVariable("Window", "height", size.Height);
+        }
+
+        public Size GetWindowSize()
+        {
+            var width = helper.GetVariable("Window", "width", defaultWidth);
+            var height = helper.GetVariable("Window", "height", defaultHeight);
             return new Size(width, height);
         }
 
-        internal async void SetLastUpdateChecked(DateTime value)
+        internal void SetLastUpdateChecked(DateTime value)
         {
-            await Task.Run(() =>
-            {
-                settings["Update"]["lastChecked"] = value;
-                settings.SaveTo(fileName);
-            });
+            helper.SetVariable("Update", "lastChecked", value);
         }
 
-        internal DateTime GetLastUpdateChecked()
+        public DateTime GetLastUpdateChecked()
         {
-            return settings["Update"]["lastChecked"];
+            return helper.GetVariable("Update", "lastChecked", defaultUpdateLastChecked);
         }
 
-        internal async void SetUpdateInterval(int value)
+        internal void SetUpdateInterval(int value)
         {
-            await Task.Run(() =>
-            {
-                settings["Update"]["interval"] = value;
-                settings.SaveTo(fileName);
-            });
+            helper.SetVariable("Update", "interval", value);
         }
 
-        internal int GetUpdateInterval()
+        public int GetUpdateInterval()
         {
-            return settings["Update"]["interval"];
+            return helper.GetVariable("Update", "interval", defaultUpdateInterval);
         }
+
+        internal void SetOptionsMenuHotkey(Keys value)
+        {
+            helper.SetVariable("Hotkeys", "optionsMenu", value);
+        }
+
+        [Hotkey(FuncToCall = "OptionsMenuHotkeyFunc", JSFuncToCall = "addOptionsMenuHotkey")]
+        public Keys GetOptionsMenuHotkey()
+        {
+            return helper.GetVariable("Hotkeys", "optionsMenu", defaultOptionsMenu);
+        }
+
+        internal void SetFriendsMenuHotkey(Keys value)
+        {
+            helper.SetVariable("Hotkeys", "friendsMenu", value);
+        }
+
+        [Hotkey(FuncToCall = "FriendsHotkeyFunc", JSFuncToCall = "addFriendsMenuHotkey")]
+        public Keys GetFriendsMenuHotkey()
+        {
+            return helper.GetVariable("Hotkeys", "friendsMenu", defaultFriendsMenu);
+        }
+
+        internal void SetChatHistoryMenuHotkey(Keys value)
+        {
+            helper.SetVariable("Hotkeys", "chatHistoryMenu", value);
+        }
+
+        [Hotkey(FuncToCall = "ChatHistoryHotkeyFunc", JSFuncToCall = "addChatHistoryHotkey")]
+        public Keys GetChatHistoryMenuHotkey()
+        {
+            return helper.GetVariable("Hotkeys", "chatHistoryMenu", defaultChatHistoryMenu);
+        }
+
+        internal void SetFullscreenHotkey(Keys value)
+        {
+            helper.SetVariable("Hotkeys", "fullscreen", value);
+        }
+
+        [Hotkey(FuncToCall = "FullscreenHotkeyFunc", JSFuncToCall = "addFullscreenBtnHotkey")]
+        public Keys GetFullscreenHotkey()
+        {
+            return helper.GetVariable("Hotkeys", "fullscreen", defaultFullscreenHotkey);
+        }
+    }
+
+    internal class Hotkey : Attribute
+    {
+        public string? FuncToCall { get; set; }
+        public string? JSFuncToCall { get; set; }
     }
 }

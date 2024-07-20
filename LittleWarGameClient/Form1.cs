@@ -25,7 +25,7 @@ namespace LittleWarGameClient
             settings = new Settings();
             this.Size = settings.GetWindowSize();
             fullScreen = new Fullscreen(this, settings);
-            kbHandler = new KeyboardHandler(webView, fullScreen);
+            kbHandler = new KeyboardHandler(webView, fullScreen, settings);
             vHandler = new VersionHandler(settings);
             mouseLocked = settings.GetMouseLock();
         }
@@ -42,13 +42,15 @@ namespace LittleWarGameClient
         {
             webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
             webView.CoreWebView2.Settings.AreBrowserAcceleratorKeysEnabled = false;
+            webView.CoreWebView2.Settings.IsStatusBarEnabled = false;
         }
 
         private void webView_NavigationCompleted(object sender, Microsoft.Web.WebView2.Core.CoreWebView2NavigationCompletedEventArgs e)
         {
             var addOnJS = System.IO.File.ReadAllText("AddOns.js");
             webView.CoreWebView2.ExecuteScriptAsync(addOnJS);
-            ElementMessage.CallJSFunc(webView, $"init.function", $"{settings.GetMouseLock().ToString().ToLower()}, \"{vHandler.CurrentVersion}\"");
+            ElementMessage.CallJSFunc(webView, "init.function", $"{settings.GetMouseLock().ToString().ToLower()}, \"{vHandler.CurrentVersion}\"");
+            kbHandler.InitHotkeyNames(settings);
             gameHasLoaded = true;
             ResizeGameWindows();
         }
@@ -72,6 +74,7 @@ namespace LittleWarGameClient
                         else
                             mouseLocked = false;
                         settings.SetMouseLock(mouseLocked);
+                        settings.Save();
                         CaptureCursor();
                         break;
                     default:
@@ -105,7 +108,8 @@ namespace LittleWarGameClient
         private void Form1_ResizeEnd(object sender, EventArgs e)
         {
             CaptureCursor();
-            settings.SetWindowSize(this.Width, this.Height);
+            settings.SetWindowSize(this.Size);
+            settings.Save();
         }
 
         private void Form1_Resize(object sender, EventArgs e)
