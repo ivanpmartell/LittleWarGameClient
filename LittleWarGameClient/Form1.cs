@@ -6,22 +6,23 @@ using System.Text.Json.Serialization;
 using System.Windows.Forms;
 using System.IO;
 using System.Reflection.Metadata;
+using System.Reflection;
 
 namespace LittleWarGameClient
 {
-    public partial class Form1 : Form
+    internal partial class Form1 : Form
     {
-        readonly Settings settings;
-        readonly Fullscreen fullScreen;
-        readonly KeyboardHandler kbHandler;
-        readonly VersionHandler vHandler;
-        bool wasSmallWindow = false;
-        bool gameHasLoaded = false;
-        bool mouseLocked;
+        private readonly Settings settings;
+        private readonly Fullscreen fullScreen;
+        private readonly KeyboardHandler kbHandler;
+        private readonly VersionHandler vHandler;
+        private bool wasSmallWindow = false;
+        private bool gameHasLoaded = false;
+        private bool mouseLocked;
         public Form1()
         {
             InitializeComponent();
-            ChangeEnvironment();
+            InitWebView();
             settings = new Settings();
             this.Size = settings.GetWindowSize();
             fullScreen = new Fullscreen(this, settings);
@@ -30,16 +31,15 @@ namespace LittleWarGameClient
             mouseLocked = settings.GetMouseLock();
         }
 
-        private async void ChangeEnvironment()
+        private async void InitWebView()
         {
+            loadingPanel.SetDoubleBuffered();
+            loadingPanel.Visible = true;
             var path = Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath);
             CoreWebView2Environment env = await CoreWebView2Environment.CreateAsync(null, Path.Join(path, "data"), new CoreWebView2EnvironmentOptions());
             await webView.EnsureCoreWebView2Async(env);
             webView.Source = new Uri("https://littlewargame.com/play", UriKind.Absolute);
-        }
-
-        private void webView_NavigationStarting(object sender, Microsoft.Web.WebView2.Core.CoreWebView2NavigationStartingEventArgs e)
-        {
+            webView.CoreWebView2.Profile.DefaultDownloadFolderPath = Path.Join(path, "downloads");
             webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
             webView.CoreWebView2.Settings.AreBrowserAcceleratorKeysEnabled = false;
             webView.CoreWebView2.Settings.IsStatusBarEnabled = false;
@@ -53,6 +53,7 @@ namespace LittleWarGameClient
             kbHandler.InitHotkeyNames(settings);
             gameHasLoaded = true;
             ResizeGameWindows();
+            this.Controls.Remove(loadingPanel);
         }
 
         private void webView_WebMessageReceived(object sender, Microsoft.Web.WebView2.Core.CoreWebView2WebMessageReceivedEventArgs e)

@@ -23,12 +23,16 @@
 
   <ItemGroup>
     <None Remove="AddOns.js" />
+    <None Remove="loader.gif" />
   </ItemGroup>
 
   <ItemGroup>
     <Content Include="AddOns.js">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Resource Include="loader.gif">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Resource>
     <Content Include="logo.ico" />
   </ItemGroup>
 
