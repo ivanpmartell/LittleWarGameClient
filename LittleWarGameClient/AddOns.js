@@ -127,6 +127,7 @@
 addons.init = {
     function(mouseLock, clientVersion) {
         this.addExitButton();
+        this.changeQuitButtonText();
         this.addClientVersion(clientVersion);
         this.replaceMouseLockCheckbox(mouseLock);
         var fullScreenButton = document.getElementById("optionsFullscreenButton");
@@ -135,6 +136,7 @@ addons.init = {
         };
         this.addClientMadeBy();
         console.log("Addons loaded");
+        this.jsInitComplete();
     },
 
     addClientMadeBy: function () {
@@ -190,5 +192,20 @@ addons.init = {
                 addons.pressMouseLockCheckbox(this);
             };
         }
+    },
+
+    changeQuitButtonText: function () {
+        document.getElementById("optionsQuitButton").innerText = "Surrender";
+        addons.addCustomHotkeyToInnerText("optionsQuitButton", "N");
+    },
+
+    jsInitComplete: function () {
+        window.chrome.webview.postMessage(
+            JSON.stringify({
+                Id: "",
+                Value: "",
+                Type: "InitComplete"
+            })
+        );
     }
 };

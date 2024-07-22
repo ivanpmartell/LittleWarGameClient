@@ -28,11 +28,14 @@
         /// </summary>
         private void InitializeComponent()
         {
+            components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             webView = new Microsoft.Web.WebView2.WinForms.WebView2();
             loaderImage = new PictureBox();
             loadingPanel = new Panel();
+            loadingText = new TextBox();
             mainImage = new PictureBox();
+            loadingTimer = new System.Windows.Forms.Timer(components);
             ((System.ComponentModel.ISupportInitialize)webView).BeginInit();
             ((System.ComponentModel.ISupportInitialize)loaderImage).BeginInit();
             loadingPanel.SuspendLayout();
@@ -56,18 +59,21 @@
             // 
             // loaderImage
             // 
-            loaderImage.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            loaderImage.Anchor = AnchorStyles.None;
             loaderImage.ErrorImage = null;
-            loaderImage.Image = Properties.Resources.loader;
-            loaderImage.Location = new Point(1164, 581);
+            loaderImage.Image = Properties.Resources.wolfRunning;
+            loaderImage.InitialImage = null;
+            loaderImage.Location = new Point(390, 560);
+            loaderImage.MaximumSize = new Size(480, 100);
             loaderImage.Name = "loaderImage";
-            loaderImage.Size = new Size(100, 100);
+            loaderImage.Size = new Size(480, 100);
             loaderImage.SizeMode = PictureBoxSizeMode.StretchImage;
             loaderImage.TabIndex = 1;
             loaderImage.TabStop = false;
             // 
             // loadingPanel
             // 
+            loadingPanel.Controls.Add(loadingText);
             loadingPanel.Controls.Add(mainImage);
             loadingPanel.Controls.Add(loaderImage);
             loadingPanel.Dock = DockStyle.Fill;
@@ -77,17 +83,39 @@
             loadingPanel.TabIndex = 2;
             loadingPanel.Visible = false;
             // 
+            // loadingText
+            // 
+            loadingText.Anchor = AnchorStyles.None;
+            loadingText.BackColor = Color.Black;
+            loadingText.BorderStyle = BorderStyle.None;
+            loadingText.Font = new Font("LCD Solid", 48F, FontStyle.Regular, GraphicsUnit.Point);
+            loadingText.ForeColor = Color.White;
+            loadingText.Location = new Point(432, 474);
+            loadingText.Name = "loadingText";
+            loadingText.Size = new Size(400, 64);
+            loadingText.TabIndex = 3;
+            loadingText.Text = "Loading";
+            loadingText.TextAlign = HorizontalAlignment.Center;
+            // 
             // mainImage
             // 
-            mainImage.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            mainImage.Anchor = AnchorStyles.None;
             mainImage.ErrorImage = null;
             mainImage.Image = Properties.Resources.soldier;
-            mainImage.Location = new Point(432, 140);
+            mainImage.InitialImage = null;
+            mainImage.Location = new Point(432, 52);
+            mainImage.MaximumSize = new Size(400, 400);
             mainImage.Name = "mainImage";
             mainImage.Size = new Size(400, 400);
             mainImage.SizeMode = PictureBoxSizeMode.StretchImage;
             mainImage.TabIndex = 2;
             mainImage.TabStop = false;
+            // 
+            // loadingTimer
+            // 
+            loadingTimer.Enabled = true;
+            loadingTimer.Interval = 1000;
+            loadingTimer.Tick += loadingTimer_Tick;
             // 
             // Form1
             // 
@@ -102,11 +130,13 @@
             Name = "Form1";
             Text = "Littlewargame";
             Activated += Form1_Activated;
+            FormClosing += Form1_FormClosing;
             ResizeEnd += Form1_ResizeEnd;
             Resize += Form1_Resize;
             ((System.ComponentModel.ISupportInitialize)webView).EndInit();
             ((System.ComponentModel.ISupportInitialize)loaderImage).EndInit();
             loadingPanel.ResumeLayout(false);
+            loadingPanel.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)mainImage).EndInit();
             ResumeLayout(false);
         }
@@ -117,5 +147,7 @@
         private PictureBox loaderImage;
         private Panel loadingPanel;
         private PictureBox mainImage;
+        private TextBox loadingText;
+        private System.Windows.Forms.Timer loadingTimer;
     }
 }

@@ -7,6 +7,9 @@ using System.Windows.Forms;
 using System.IO;
 using System.Reflection.Metadata;
 using System.Reflection;
+using System.Data;
+using System.Diagnostics;
+using NAudio.CoreAudioApi;
 
 namespace LittleWarGameClient
 {
@@ -16,13 +19,17 @@ namespace LittleWarGameClient
         private readonly Fullscreen fullScreen;
         private readonly KeyboardHandler kbHandler;
         private readonly VersionHandler vHandler;
+        private readonly AudioManager audioMngr;
+
         private bool wasSmallWindow = false;
         private bool gameHasLoaded = false;
         private bool mouseLocked;
+
         public Form1()
         {
             InitializeComponent();
             InitWebView();
+            audioMngr = new AudioManager(this);
             settings = new Settings();
             this.Size = settings.GetWindowSize();
             fullScreen = new Fullscreen(this, settings);
@@ -53,7 +60,6 @@ namespace LittleWarGameClient
             kbHandler.InitHotkeyNames(settings);
             gameHasLoaded = true;
             ResizeGameWindows();
-            this.Controls.Remove(loadingPanel);
         }
 
         private void webView_WebMessageReceived(object sender, Microsoft.Web.WebView2.Core.CoreWebView2WebMessageReceivedEventArgs e)
@@ -78,7 +84,9 @@ namespace LittleWarGameClient
                         settings.SaveAsync();
                         CaptureCursor();
                         break;
-                    default:
+                    case ButtonType.InitComplete:
+                        this.Controls.Remove(loadingPanel);
+                        loadingTimer.Enabled = false;
                         break;
                 }
             }
@@ -134,6 +142,19 @@ namespace LittleWarGameClient
                     ElementMessage.CallJSFunc(webView, "setNormalWindowSizes");
                 }
             }
+        }
+
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            audioMngr.DestroySession();
+        }
+
+        private void loadingTimer_Tick(object sender, EventArgs e)
+        {
+            if (loadingText.Visible)
+                loadingText.Visible = false;
+            else
+                loadingText.Visible = true;
         }
     }
 }

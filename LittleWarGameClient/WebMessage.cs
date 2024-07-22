@@ -26,6 +26,8 @@ namespace LittleWarGameClient
         [EnumMember(Value = "Exit")]
         Exit,
         [EnumMember(Value = "MouseLock")]
-        MouseLock
+        MouseLock,
+        [EnumMember(Value = "InitComplete")]
+        InitComplete
     }
 }

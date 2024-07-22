@@ -23,23 +23,21 @@
 
   <ItemGroup>
     <None Remove="AddOns.js" />
-    <None Remove="loader.gif" />
   </ItemGroup>
 
   <ItemGroup>
     <Content Include="AddOns.js">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Resource Include="loader.gif">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </Resource>
     <Content Include="logo.ico" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="IniFile.NET" Version="1.6.0" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2592.51" />
+    <PackageReference Include="NAudio" Version="2.2.1" />
     <PackageReference Include="Octokit" Version="13.0.1" />
+    <PackageReference Include="System.Management" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>
