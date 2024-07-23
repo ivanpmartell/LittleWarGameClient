@@ -29,7 +29,7 @@ namespace LittleWarGameClient
         {
             InitializeComponent();
             InitWebView();
-            audioMngr = new AudioManager(this);
+            audioMngr = new AudioManager(this.Text);
             settings = new Settings();
             this.Size = settings.GetWindowSize();
             fullScreen = new Fullscreen(this, settings);
@@ -41,7 +41,6 @@ namespace LittleWarGameClient
         private async void InitWebView()
         {
             loadingPanel.SetDoubleBuffered();
-            loadingPanel.Visible = true;
             var path = Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath);
             CoreWebView2Environment env = await CoreWebView2Environment.CreateAsync(null, Path.Join(path, "data"), new CoreWebView2EnvironmentOptions());
             await webView.EnsureCoreWebView2Async(env);
@@ -56,7 +55,7 @@ namespace LittleWarGameClient
         {
             var addOnJS = System.IO.File.ReadAllText("AddOns.js");
             webView.CoreWebView2.ExecuteScriptAsync(addOnJS);
-            ElementMessage.CallJSFunc(webView, "init.function", $"{settings.GetMouseLock().ToString().ToLower()}, \"{vHandler.CurrentVersion}\"");
+            ElementMessage.CallJSFunc(webView, "init.function", $"\"{vHandler.CurrentVersion}\", {settings.GetMouseLock().ToString().ToLower()}, {settings.GetVolume()}");
             kbHandler.InitHotkeyNames(settings);
             gameHasLoaded = true;
             ResizeGameWindows();
@@ -85,8 +84,25 @@ namespace LittleWarGameClient
                         CaptureCursor();
                         break;
                     case ButtonType.InitComplete:
-                        this.Controls.Remove(loadingPanel);
+                        loadingPanel.Visible = false;
                         loadingTimer.Enabled = false;
+                        loadingText.Text = "Reconnecting";
+                        break;
+                    case ButtonType.VolumeChanging:
+                        if (msg.Value != null)
+                        {
+                            var val = float.Parse(msg.Value);
+                            audioMngr.ChangeVolume(val);
+                        }
+                        break;
+                    case ButtonType.VolumeChanged:
+                        if (msg.Value != null)
+                        {
+                            var val = float.Parse(msg.Value);
+                            audioMngr.ChangeVolume(val);
+                            settings.SetVolume(val);
+                            settings.SaveAsync();
+                        }
                         break;
                 }
             }
@@ -155,6 +171,12 @@ namespace LittleWarGameClient
                 loadingText.Visible = false;
             else
                 loadingText.Visible = true;
+        }
+
+        private void webView_NavigationStarting(object sender, CoreWebView2NavigationStartingEventArgs e)
+        {
+            loadingPanel.Visible = true;
+            loadingTimer.Enabled = true;
         }
     }
 }

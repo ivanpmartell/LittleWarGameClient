@@ -51,6 +51,18 @@ namespace LittleWarGameClient
             }
         }
 
+        internal double GetVariable(string sectionName, string propertyName, double defaultValue)
+        {
+            try
+            {
+                return settings[sectionName][propertyName];
+            }
+            catch
+            {
+                return defaultValue;
+            }
+        }
+
         internal DateTime GetVariable(string sectionName, string propertyName, DateTime defaultValue)
         {
             try
@@ -101,6 +113,19 @@ namespace LittleWarGameClient
         }
 
         internal void SetVariable(string sectionName, string propertyName, int value)
+        {
+            Section section = EnsureSection(sectionName);
+            try
+            {
+                section[propertyName] = value;
+            }
+            catch
+            {
+                section.Add(new Property(propertyName, value));
+            }
+        }
+
+        internal void SetVariable(string sectionName, string propertyName, double value)
         {
             Section section = EnsureSection(sectionName);
             try

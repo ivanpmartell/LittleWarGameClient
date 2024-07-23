@@ -29,6 +29,26 @@
         );
     },
 
+    changeVolume: function (element, volumeLevel) {
+        window.chrome.webview.postMessage(
+            JSON.stringify({
+                Id: element.id,
+                Value: volumeLevel.toString(),
+                Type: "VolumeChanging"
+            })
+        );
+    },
+
+    saveVolumeChange: function (element, volumeLevel) {
+        window.chrome.webview.postMessage(
+            JSON.stringify({
+                Id: element.id,
+                Value: volumeLevel.toString(),
+                Type: "VolumeChanged"
+            })
+        );
+    },
+
     fakeClick: function (anchorObj) {
         if (anchorObj.click) {
             anchorObj.click()
@@ -125,9 +145,11 @@
 };
 
 addons.init = {
-    function(mouseLock, clientVersion) {
+    function(clientVersion, mouseLock, volume) {
+        this.handleConnectionError();
         this.addExitButton();
         this.changeQuitButtonText();
+        this.addVolumeSlider(volume);
         this.addClientVersion(clientVersion);
         this.replaceMouseLockCheckbox(mouseLock);
         var fullScreenButton = document.getElementById("optionsFullscreenButton");
@@ -139,12 +161,67 @@ addons.init = {
         this.jsInitComplete();
     },
 
+    handleConnectionError: function () {
+        var connectionErrorWindow = document.getElementById("NoConnectionWindow");
+        if (connectionErrorWindow != null) {
+            this.addReconnect(connectionErrorWindow);
+        }
+        else {
+            var observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    for(var i = 0; i < mutation.addedNodes.length; i++)
+                    {
+                        var element = mutation.addedNodes[i];
+                        if (element.id == "NoConnectionWindow")
+                        {
+                            addons.init.addReconnect(element);
+                        }
+                    }
+                });
+            });
+            observer.observe(document.body, {
+                childList: true
+            });
+        }
+    },
+
+    addReconnect: function (element) {
+        element.style = "position: absolute; top: 50px; width: 300px;"
+        var windowTitle = element.getElementsByTagName('h2')[0];
+        windowTitle.style = "position: relative;";
+        var reconnectButton = document.createElement("h1");
+        reconnectButton.innerText = "Reconnect";
+        reconnectButton.style = "position: relative; left: 30%; width: fit-content;";
+        reconnectButton.onmouseover = function() { this.style.color='darkorange' };
+        reconnectButton.onmouseout =  function() { this.style.color='inherit' };
+        reconnectButton.onclick =  function() { location.reload(); };
+        windowTitle.insertAdjacentElement('afterend', reconnectButton);
+    },
+    
+    addVolumeSlider: function (volume) {
+        var globalVolumeId = "globalVolumeLabel";
+        if (!document.getElementById(globalVolumeId)) {
+            var globalVolume = document.createElement("p");
+            globalVolume.id = globalVolumeId;
+            globalVolume.innerText = "Master Volume";
+            var globalVolumeDiv = document.createElement("div");
+            globalVolumeDiv.id = "optionsMasterSoundButton";
+            var globalVolumeAnchor = document.createElement("a");
+            globalVolumeDiv.appendChild(globalVolumeAnchor);
+            globalVolume.appendChild(globalVolumeDiv);
+            document.getElementById("optionsChecklistDiv").prepend(globalVolume);
+            $(globalVolumeDiv).slider({ slide: (event, ui) => addons.changeVolume(globalVolumeDiv, ui.value / 100) });
+            $(globalVolumeDiv).slider({ change: (event, ui) => addons.saveVolumeChange(globalVolumeDiv, ui.value / 100) });
+            $(globalVolumeDiv).slider("value", volume * 100);
+        }
+    },
+
     addClientMadeBy: function () {
         var imprintLink = document.getElementById("imprintLink");
         imprintLink.onclick = function () {
             var breakElement = document.createElement("br");
             var divElement = document.createElement("div");
-            divElement.innerHTML = "Windows client made by SunNoise<br>© 2024";
+            divElement.innerHTML = "Windows client made by Ivan Martell<br>© 2024";
             var imprint = document.getElementById("addScrollableSubDivTextArea2");
             imprint.appendChild(breakElement);
             imprint.appendChild(divElement);

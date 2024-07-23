@@ -28,6 +28,10 @@ namespace LittleWarGameClient
         [EnumMember(Value = "MouseLock")]
         MouseLock,
         [EnumMember(Value = "InitComplete")]
-        InitComplete
+        InitComplete,
+        [EnumMember(Value = "VolumeChanging")]
+        VolumeChanging,
+        [EnumMember(Value = "VolumeChanged")]
+        VolumeChanged
     }
 }

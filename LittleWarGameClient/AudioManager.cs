@@ -14,13 +14,13 @@ namespace LittleWarGameClient
     {
         private MMDevice? mainDevice;
         private AudioSessionControl? currentSession;
-        private readonly Form form;
+        private readonly string formTitle;
 
-        public AudioManager(Form form)
+        public AudioManager(string formTitle)
         {
-            this.form = form;
+            this.formTitle = formTitle;
             var etor = new MMDeviceEnumerator();
-            this.mainDevice = etor.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+            mainDevice = etor.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
             if (mainDevice != null)
             {
                 var sessions = mainDevice.AudioSessionManager.Sessions;
@@ -32,14 +32,20 @@ namespace LittleWarGameClient
                 mainDevice.AudioSessionManager.OnSessionCreated += AudioSessionManager_OnSessionCreated;
             }
         }
+
+        internal void ChangeVolume(float value)
+        {
+            if (currentSession != null)
+                currentSession.SimpleAudioVolume.Volume = value;
+        }
         internal void DestroySession()
         {
-            var sess = this.currentSession;
-            this.currentSession = null;
-            this.UnregisterFromSession(sess);
+            var sess = currentSession;
+            currentSession = null;
+            UnregisterFromSession(sess);
             if (mainDevice != null)
             {
-                mainDevice.AudioSessionManager.OnSessionCreated -= this.AudioSessionManager_OnSessionCreated;
+                mainDevice.AudioSessionManager.OnSessionCreated -= AudioSessionManager_OnSessionCreated;
                 mainDevice.Dispose();
             }
         }
@@ -77,10 +83,11 @@ namespace LittleWarGameClient
             if (!isSubProc)
                 return;
 
-            session.DisplayName = form.Text;
+
+            session.DisplayName = formTitle;
             session.IconPath = GetType().Assembly.Location;
-            this.currentSession = session;
-            this.currentSession.RegisterEventClient(this);
+            currentSession = session;
+            currentSession.RegisterEventClient(this);
         }
 
         private void AudioSessionManager_OnSessionCreated(object sender, IAudioSessionControl newSession)
@@ -130,13 +137,13 @@ namespace LittleWarGameClient
         {
             if (state == AudioSessionState.AudioSessionStateExpired)
             {
-                this.ReleaseSessionDelayed(this.currentSession);
+                ReleaseSessionDelayed(currentSession);
             }
         }
 
         void IAudioSessionEventsHandler.OnSessionDisconnected(AudioSessionDisconnectReason disconnectReason)
         {
-            this.ReleaseSessionDelayed(this.currentSession);
+            ReleaseSessionDelayed(currentSession);
         }
 
         private void ReleaseSessionDelayed(AudioSessionControl? session)

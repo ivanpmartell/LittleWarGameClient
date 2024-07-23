@@ -16,6 +16,7 @@ namespace LittleWarGameClient
         private const bool defaultFullscreen = false;
         private const bool defaultMouseLock = false;
         private const int defaultUpdateInterval = 1;
+        private const double defaultVolume = 1.0;
         private readonly DateTime defaultUpdateLastChecked = DateTime.MinValue;
         private const Keys defaultOptionsMenu = Keys.F10;
         private const Keys defaultFriendsMenu = Keys.F9;
@@ -45,6 +46,7 @@ namespace LittleWarGameClient
             SetFriendsMenuHotkey(GetFriendsMenuHotkey());
             SetChatHistoryMenuHotkey(GetChatHistoryMenuHotkey());
             SetFullscreenHotkey(GetFullscreenHotkey());
+            SetVolume(GetVolume());
             SaveAsync();
         }
 
@@ -73,6 +75,10 @@ namespace LittleWarGameClient
                     new Property("friendsMenu", defaultFriendsMenu.ToString()),
                     new Property("chatHistoryMenu", defaultChatHistoryMenu.ToString()),
                     new Property("fullscreen", defaultFullscreenHotkey.ToString())
+                },
+                new Section("Audio")
+                {
+                    new Property("volume", defaultVolume)
                 }
             };
             return settings;
@@ -186,6 +192,16 @@ namespace LittleWarGameClient
         public Keys GetFullscreenHotkey()
         {
             return helper.GetVariable("Hotkeys", "fullscreen", defaultFullscreenHotkey);
+        }
+
+        internal void SetVolume(double value)
+        {
+            helper.SetVariable("Audio", "volume", value);
+        }
+
+        public double GetVolume()
+        {
+            return helper.GetVariable("Audio", "volume", defaultVolume);
         }
     }
 

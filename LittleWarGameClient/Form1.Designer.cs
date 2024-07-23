@@ -54,6 +54,7 @@
             webView.Size = new Size(1264, 681);
             webView.TabIndex = 0;
             webView.ZoomFactor = 1D;
+            webView.NavigationStarting += webView_NavigationStarting;
             webView.NavigationCompleted += webView_NavigationCompleted;
             webView.WebMessageReceived += webView_WebMessageReceived;
             // 
@@ -90,9 +91,9 @@
             loadingText.BorderStyle = BorderStyle.None;
             loadingText.Font = new Font("LCD Solid", 48F, FontStyle.Regular, GraphicsUnit.Point);
             loadingText.ForeColor = Color.White;
-            loadingText.Location = new Point(432, 474);
+            loadingText.Location = new Point(390, 474);
             loadingText.Name = "loadingText";
-            loadingText.Size = new Size(400, 64);
+            loadingText.Size = new Size(480, 64);
             loadingText.TabIndex = 3;
             loadingText.Text = "Loading";
             loadingText.TextAlign = HorizontalAlignment.Center;
@@ -103,10 +104,9 @@
             mainImage.ErrorImage = null;
             mainImage.Image = Properties.Resources.soldier;
             mainImage.InitialImage = null;
-            mainImage.Location = new Point(432, 52);
-            mainImage.MaximumSize = new Size(400, 400);
+            mainImage.Location = new Point(582, 120);
             mainImage.Name = "mainImage";
-            mainImage.Size = new Size(400, 400);
+            mainImage.Size = new Size(100, 100);
             mainImage.SizeMode = PictureBoxSizeMode.StretchImage;
             mainImage.TabIndex = 2;
             mainImage.TabStop = false;
