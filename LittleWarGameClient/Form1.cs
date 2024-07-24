@@ -140,7 +140,6 @@ namespace LittleWarGameClient
 
         private void Form1_Resize(object sender, EventArgs e)
         {
-            mainImage.Top = this.Height / 4;
             CaptureCursor();
             ResizeGameWindows();
         }
