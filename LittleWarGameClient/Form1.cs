@@ -15,6 +15,7 @@ namespace LittleWarGameClient
 {
     internal partial class Form1 : Form
     {
+        private const string baseUrl = @"https://littlewargame.com/play";
         private readonly Settings settings;
         private readonly Fullscreen fullScreen;
         private readonly KeyboardHandler kbHandler;
@@ -44,7 +45,7 @@ namespace LittleWarGameClient
             var path = Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath);
             CoreWebView2Environment env = await CoreWebView2Environment.CreateAsync(null, Path.Join(path, "data"), new CoreWebView2EnvironmentOptions());
             await webView.EnsureCoreWebView2Async(env);
-            webView.Source = new Uri("https://littlewargame.com/play", UriKind.Absolute);
+            webView.Source = new Uri(baseUrl, UriKind.Absolute);
             webView.CoreWebView2.Profile.DefaultDownloadFolderPath = Path.Join(path, "downloads");
             webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
             webView.CoreWebView2.Settings.AreBrowserAcceleratorKeysEnabled = false;
@@ -53,12 +54,10 @@ namespace LittleWarGameClient
 
         private void webView_NavigationCompleted(object sender, Microsoft.Web.WebView2.Core.CoreWebView2NavigationCompletedEventArgs e)
         {
-            var addOnJS = System.IO.File.ReadAllText("AddOns.js");
-            webView.CoreWebView2.ExecuteScriptAsync(addOnJS);
+            var addonJS = System.IO.File.ReadAllText("addons.js");
+            webView.CoreWebView2.ExecuteScriptAsync(addonJS);
             ElementMessage.CallJSFunc(webView, "init.function", $"\"{vHandler.CurrentVersion}\", {settings.GetMouseLock().ToString().ToLower()}, {settings.GetVolume()}");
             kbHandler.InitHotkeyNames(settings);
-            gameHasLoaded = true;
-            ResizeGameWindows();
         }
 
         private void webView_WebMessageReceived(object sender, Microsoft.Web.WebView2.Core.CoreWebView2WebMessageReceivedEventArgs e)
@@ -84,6 +83,8 @@ namespace LittleWarGameClient
                         CaptureCursor();
                         break;
                     case ButtonType.InitComplete:
+                        gameHasLoaded = true;
+                        ResizeGameWindows();
                         loadingPanel.Visible = false;
                         loadingTimer.Enabled = false;
                         loadingText.Text = "Reconnecting";
@@ -139,6 +140,7 @@ namespace LittleWarGameClient
 
         private void Form1_Resize(object sender, EventArgs e)
         {
+            mainImage.Top = this.Height / 4;
             CaptureCursor();
             ResizeGameWindows();
         }
@@ -175,8 +177,24 @@ namespace LittleWarGameClient
 
         private void webView_NavigationStarting(object sender, CoreWebView2NavigationStartingEventArgs e)
         {
+            webView.CoreWebView2.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.Script);
+            webView.CoreWebView2.WebResourceRequested +=
+                delegate (object? sender, CoreWebView2WebResourceRequestedEventArgs args)
+                {
+                    if (args.Request.Uri == $"{baseUrl}/js/lwg-5.0.0.js")
+                    {
+                        try
+                        {
+                            FileStream fs = File.Open("override/lwg-5.0.0.js", FileMode.Open);
+                            CoreWebView2WebResourceResponse response = webView.CoreWebView2.Environment.CreateWebResourceResponse(fs, 200, "OK", "Content-Type: text/javascript");
+                            args.Response = response;
+                        }
+                        catch { }
+                    }
+                };
             loadingPanel.Visible = true;
             loadingTimer.Enabled = true;
+            gameHasLoaded = false;
         }
     }
 }

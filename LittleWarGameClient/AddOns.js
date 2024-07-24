@@ -49,14 +49,14 @@
         );
     },
 
-    fakeClick: function (anchorObj) {
-        if (anchorObj.click) {
-            anchorObj.click()
+    fakeClick: function (element) {
+        if (element.click) {
+            element.click()
         } else if (document.createEvent) {
             var event = new MouseEvent('click', {
                 'view': window
             });
-            anchorObj.dispatchEvent(evt);
+            element.dispatchEvent(evt);
         }
     },
 
@@ -148,6 +148,8 @@ addons.init = {
     function(clientVersion, mouseLock, volume) {
         this.handleConnectionError();
         this.addExitButton();
+        this.resizeInfoWindow();
+        this.moveLoadingText();
         this.changeQuitButtonText();
         this.addVolumeSlider(volume);
         this.addClientVersion(clientVersion);
@@ -159,6 +161,16 @@ addons.init = {
         this.addClientMadeBy();
         console.log("Addons loaded");
         this.jsInitComplete();
+    },
+
+    moveLoadingText: function () {
+        var loadingText = document.getElementById("loadingText");
+        loadingText.style.cssText = "top: 50px;";
+    },
+
+    resizeInfoWindow: function () {
+        var infoWindow = document.getElementById("playerInfoWindow");
+        infoWindow.style.cssText += "top: 50px; height: 580px;";
     },
 
     handleConnectionError: function () {

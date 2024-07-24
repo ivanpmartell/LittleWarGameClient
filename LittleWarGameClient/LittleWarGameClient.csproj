@@ -23,13 +23,17 @@
 
   <ItemGroup>
     <None Remove="AddOns.js" />
+    <None Remove="override\lwg-5.0.0.js" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="AddOns.js">
+    <Content Include="addons.js">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="logo.ico" />
+    <Content Include="override\lwg-5.0.0.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>

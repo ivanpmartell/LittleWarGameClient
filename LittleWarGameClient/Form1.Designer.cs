@@ -104,7 +104,8 @@
             mainImage.ErrorImage = null;
             mainImage.Image = Properties.Resources.soldier;
             mainImage.InitialImage = null;
-            mainImage.Location = new Point(582, 120);
+            mainImage.Location = new Point(582, 70);
+            mainImage.Margin = new Padding(0);
             mainImage.Name = "mainImage";
             mainImage.Size = new Size(100, 100);
             mainImage.SizeMode = PictureBoxSizeMode.StretchImage;

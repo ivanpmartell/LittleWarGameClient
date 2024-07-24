@@ -84,25 +84,18 @@ namespace LittleWarGameClient
         private async Task<Version> GetLatestGitHubVersion()
         {
             var client = new GitHubClient(new ProductHeaderValue("LWGClient"));
-            IReadOnlyList<Release> releases = await client.Repository.Release.GetAll("ivanpmartell", "LittleWarGameClient");
-            return new Version(releases[0].TagName.Substring(1));
+            var release = await client.Repository.Release.GetLatest("ivanpmartell", "LittleWarGameClient");
+            return new Version(release.TagName.Substring(1));
         }
 
         private async Task<TResult> TimeoutAfter<TResult>(Task<TResult> task, TimeSpan timeout)
         {
-            // We need to be able to cancel the "timeout" task, so create a token source
             using var cts = new CancellationTokenSource();
-            // Create the timeout task (don't await it)
             var timeoutTask = Task<TResult>.Delay(timeout, cts.Token);
-
-            // Run the task and timeout in parallel, return the Task that completes first
             var completedTask = await Task<TResult>.WhenAny(task, timeoutTask).ConfigureAwait(false);
-
             if (completedTask == task)
             {
-                // Cancel the "timeout" task so we don't leak a Timer
                 cts.Cancel();
-                // await the task to bubble up any errors etc
                 return await task.ConfigureAwait(false);
             }
             else
