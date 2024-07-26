@@ -1,6 +1,6 @@
 ﻿addons = {
     pressFullScreenButton: function(element) {
-        window.chrome.webview.postMessage(
+        CefSharp.PostMessage(
             JSON.stringify({
                 Id: element.id,
                 Value: "Toggled",
@@ -10,7 +10,7 @@
     },
 
     pressExitButton: function (element) {
-        window.chrome.webview.postMessage(
+        CefSharp.PostMessage(
             JSON.stringify({
                 Id: element.id,
                 Value: "Pressed",
@@ -20,7 +20,7 @@
     },
 
     pressMouseLockCheckbox: function (element) {
-        window.chrome.webview.postMessage(
+       CefSharp.PostMessage(
             JSON.stringify({
                 Id: element.id,
                 Value: element.checked.toString(),
@@ -30,7 +30,7 @@
     },
 
     changeVolume: function (element, volumeLevel) {
-        window.chrome.webview.postMessage(
+        CefSharp.PostMessage(
             JSON.stringify({
                 Id: element.id,
                 Value: volumeLevel.toString(),
@@ -40,7 +40,7 @@
     },
 
     saveVolumeChange: function (element, volumeLevel) {
-        window.chrome.webview.postMessage(
+       CefSharp.PostMessage(
             JSON.stringify({
                 Id: element.id,
                 Value: volumeLevel.toString(),
@@ -289,7 +289,7 @@ addons.init = {
     },
 
     jsInitComplete: function () {
-        window.chrome.webview.postMessage(
+        CefSharp.PostMessage(
             JSON.stringify({
                 Id: "",
                 Value: "",

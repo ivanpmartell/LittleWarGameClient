@@ -1,18 +1,16 @@
-﻿using Microsoft.Web.WebView2.WinForms;
-
-namespace LittleWarGameClient
+﻿namespace LittleWarGameClient
 {
     internal class Fullscreen
     {
-        readonly Form TargetForm;
+        readonly Form gameForm;
         readonly Settings settings;
 
         FormWindowState PreviousWindowState;
 
         internal Fullscreen(Form targetForm, Settings s)
         {
-            TargetForm = targetForm;
-            PreviousWindowState = TargetForm.WindowState;
+            gameForm = targetForm;
+            PreviousWindowState = gameForm.WindowState;
             settings = s;
             if (settings.GetFullScreen())
                 Enter();
@@ -22,7 +20,7 @@ namespace LittleWarGameClient
         internal void Toggle()
         {
             bool state;
-            if (TargetForm.WindowState == FormWindowState.Maximized && TargetForm.FormBorderStyle == FormBorderStyle.None)
+            if (gameForm.WindowState == FormWindowState.Maximized && gameForm.FormBorderStyle == FormBorderStyle.None)
             {
                 state = false;
                 Leave();
@@ -38,19 +36,19 @@ namespace LittleWarGameClient
 
         private void Enter()
         {
-            if (TargetForm.WindowState != FormWindowState.Maximized || TargetForm.FormBorderStyle != FormBorderStyle.None)
+            if (gameForm.WindowState != FormWindowState.Maximized || gameForm.FormBorderStyle != FormBorderStyle.None)
             {
-                PreviousWindowState = TargetForm.WindowState;
-                TargetForm.WindowState = FormWindowState.Normal;
-                TargetForm.FormBorderStyle = FormBorderStyle.None;
-                TargetForm.WindowState = FormWindowState.Maximized;
+                PreviousWindowState = gameForm.WindowState;
+                gameForm.WindowState = FormWindowState.Normal;
+                gameForm.FormBorderStyle = FormBorderStyle.None;
+                gameForm.WindowState = FormWindowState.Maximized;
             }
         }
 
         private void Leave()
         {
-            TargetForm.FormBorderStyle = FormBorderStyle.Sizable;
-            TargetForm.WindowState = PreviousWindowState;
+            gameForm.FormBorderStyle = FormBorderStyle.Sizable;
+            gameForm.WindowState = PreviousWindowState;
         }
     }
 }

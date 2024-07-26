@@ -1,23 +1,20 @@
-﻿using Microsoft.Web.WebView2.WinForms;
-using System;
+﻿using System;
 using System.Reflection.Metadata;
 using System.Reflection;
+using CefSharp.WinForms;
+using CefSharp;
 
 namespace LittleWarGameClient
 {
-    internal class KeyboardHandler
+    internal class KeyboardHandler : IKeyboardHandler
     {
-        private readonly WebView2 webView;
         private readonly Fullscreen fullScreen;
         private readonly Dictionary<Keys, MethodInfo?> hotKeys = new Dictionary<Keys, MethodInfo?>();
 
-        internal KeyboardHandler(WebView2 wv, Fullscreen fs, Settings settings)
+        internal KeyboardHandler(Fullscreen fs, Settings settings)
         {
             InitHotkeys(settings);
             fullScreen = fs;
-            webView = wv;
-            webView.KeyDown += TargetWebView_KeyDown;
-            webView.KeyUp += TargetWebView_KeyUp;
         }
 
         private void InitHotkeys(Settings settings)
@@ -42,7 +39,7 @@ namespace LittleWarGameClient
             }
         }
 
-        internal void InitHotkeyNames(Settings settings)
+        internal void InitHotkeyNames(ChromiumWebBrowser sender, Settings settings)
         {
             Type type = typeof(Settings);
             foreach (var methodInfo in type.GetMethods().Where(p => Attribute.IsDefined(p, typeof(Hotkey))))
@@ -56,53 +53,63 @@ namespace LittleWarGameClient
                 }
                 var key = methodInfo.Invoke(settings, null);
                 if (jsFuncToCall != null && key != null)
-                    ElementMessage.CallJSFunc(webView, jsFuncToCall, $"\"{(Keys)key}\"");
+                    ElementMessage.CallJSFunc(sender, jsFuncToCall, $"\"{(Keys)key}\"");
             }
         }
 
-        private void TargetWebView_KeyUp(object? sender, KeyEventArgs e)
-        { 
-            if (hotKeys.ContainsKey(e.KeyData))
-            {
-                var funcToCall = hotKeys[e.KeyData];
-                if (funcToCall != null && sender != null)
-                    funcToCall.Invoke(this, new object[] { (WebView2)sender });
-                e.Handled = true;
-            }
-        }
-
-        private void FullscreenHotkeyFunc(WebView2 sender)
+        private void FullscreenHotkeyFunc(ChromiumWebBrowser sender)
         {
-            fullScreen.Toggle();
+            GameForm.InvokeUI(() =>
+            {
+                fullScreen.Toggle();
+            });
         }
 
-        private void OptionsMenuHotkeyFunc(WebView2 sender)
+        private void OptionsMenuHotkeyFunc(ChromiumWebBrowser sender)
         {
             ElementMessage.CallJSFunc(sender, "toggleMenu");
         }
 
-        private void ChatHistoryHotkeyFunc(WebView2 sender)
+        private void ChatHistoryHotkeyFunc(ChromiumWebBrowser sender)
         {
-            ElementMessage.CallJSFunc((WebView2)sender, "toggleChat");
+            ElementMessage.CallJSFunc((ChromiumWebBrowser)sender, "toggleChat");
         }
 
-        private void FriendsHotkeyFunc(WebView2 sender)
+        private void FriendsHotkeyFunc(ChromiumWebBrowser sender)
         {
-            ElementMessage.CallJSFunc((WebView2)sender, "toggleFriends");
+            ElementMessage.CallJSFunc((ChromiumWebBrowser)sender, "toggleFriends");
         }
 
-        private void TargetWebView_KeyDown(object? sender, KeyEventArgs e)
+        public bool OnPreKeyEvent(IWebBrowser webView, IBrowser browser, KeyType type, int windowsKeyCode, int nativeKeyCode, CefEventFlags modifiers, bool isSystemKey, ref bool isKeyboardShortcut)
         {
-#if DEBUG
-            if (e.KeyData == Keys.F12)
+        if (OverlayForm.IsActivated)
             {
-                webView.CoreWebView2.OpenDevToolsWindow();
-                e.Handled = true;
-                return;
+                return true;
             }
+            var key = (Keys)windowsKeyCode;
+            if (type == KeyType.RawKeyDown)
+            {
+#if DEBUG
+                if (key == Keys.F12)
+                {
+                    webView.ShowDevTools();
+                    return true;
+                }
 #endif
-            if (hotKeys.ContainsKey(e.KeyData))
-                e.Handled = true;
+                if (hotKeys.ContainsKey(key))
+                {
+                    var funcToCall = hotKeys[key];
+                    if (funcToCall != null && webView != null)
+                        funcToCall.Invoke(this, new object[] { (ChromiumWebBrowser)webView });
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public bool OnKeyEvent(IWebBrowser webView, IBrowser browser, KeyType type, int windowsKeyCode, int nativeKeyCode, CefEventFlags modifiers, bool isSystemKey)
+        {
+            return false;
         }
     }
 }

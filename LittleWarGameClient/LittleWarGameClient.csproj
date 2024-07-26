@@ -9,37 +9,55 @@
     <SignAssembly>False</SignAssembly>
     <DelaySign>True</DelaySign>
     <ApplicationIcon>logo.ico</ApplicationIcon>
+    <Platforms>x64;x86</Platforms>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'">
     <CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-	<DebugType>none</DebugType>
-	<DebugSymbols>false</DebugSymbols>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x86'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
     <CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="AddOns.js" />
-    <None Remove="override\lwg-5.0.0.js" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="addons.js">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
     <Content Include="logo.ico" />
-    <Content Include="override\lwg-5.0.0.js">
+	<ContentWithTargetPath Include="steam\steam_api.dll" Condition=" '$(Platform)' == 'x86' ">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+		<TargetPath>steam_api.dll</TargetPath>
+    </ContentWithTargetPath>
+	<ContentWithTargetPath Include="steam\steam_api64.dll" Condition=" '$(Platform)' == 'x64' ">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>steam_api64.dll</TargetPath>
+    </ContentWithTargetPath>
+	<None Include="js\addons.js">
+	  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	</None>
+	<None Include="js\lwg-5.0.0.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	</None>
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="CefSharp.WinForms.NETCore" Version="126.2.180" />
+    <PackageReference Include="Facepunch.Steamworks" Version="2.3.3" Condition=" '$(Platform)' == 'x64' " />
+    <PackageReference Include="Facepunch.Steamworks.win32" Version="2.3.3" Condition=" '$(Platform)' == 'x86' " />
     <PackageReference Include="IniFile.NET" Version="1.6.0" />
-    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2592.51" />
     <PackageReference Include="NAudio" Version="2.2.1" />
+    <PackageReference Include="nud2dlib" Version="2.0.0" Condition=" '$(Platform)' == 'x86' " />
+    <PackageReference Include="nud2dlib-x64" Version="2.0.0" Condition=" '$(Platform)' == 'x64' " />
     <PackageReference Include="Octokit" Version="13.0.1" />
     <PackageReference Include="System.Management" Version="8.0.0" />
   </ItemGroup>

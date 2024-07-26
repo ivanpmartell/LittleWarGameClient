@@ -1,5 +1,4 @@
-﻿using Microsoft.Web.WebView2.WinForms;
-using Octokit;
+﻿using Octokit;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -41,8 +40,16 @@ namespace LittleWarGameClient
             settings = s;
             var productVersion = System.Windows.Forms.Application.ProductVersion.Split('+').First();
             CurrentVersion = new Version(productVersion);
-            TryGetLatestVersionAsync();
             LatestVersionObtained += CheckForUpdate;
+            PerformCheck();
+        }
+
+        private async void PerformCheck()
+        {
+            if (CanCheckForUpdate())
+            {
+                LatestVersion = await TryGetLatestVersionAsync();
+            }
         }
 
         internal virtual void CheckForUpdate(object? sender, EventArgs e)
@@ -59,26 +66,32 @@ namespace LittleWarGameClient
 
         private bool RequiresUpdate()
         {
-            var lastChecked = settings.GetLastUpdateChecked();
-            var interval = settings.GetUpdateInterval();
-            var dateToCheckForUpdates =lastChecked.AddDays(interval);
-            if (DateTime.Now < dateToCheckForUpdates)
-                return false;
             int versionComparison = CurrentVersion.CompareTo(LatestVersion);
             if (versionComparison < 0)
                 return true;
             return false;
         }
 
-        private async void TryGetLatestVersionAsync()
+        private bool CanCheckForUpdate()
+        {
+            var lastChecked = settings.GetLastUpdateChecked();
+            var interval = settings.GetUpdateInterval();
+            var dateToCheckForUpdates = lastChecked.AddDays(interval);
+            if (DateTime.Now < dateToCheckForUpdates)
+                return false;
+            return true;
+        }
+
+        private async Task<Version?> TryGetLatestVersionAsync()
         {
             try
             {
-                LatestVersion = await TimeoutAfter(GetLatestGitHubVersion(), TimeSpan.FromSeconds(10.0));
+                return await TimeoutAfter(GetLatestGitHubVersion(), TimeSpan.FromSeconds(10.0));
             }
             catch (Exception)
             {
                 MessageBox.Show("Could not obtain the latest version");
+                return null;
             }
         }
         private async Task<Version> GetLatestGitHubVersion()

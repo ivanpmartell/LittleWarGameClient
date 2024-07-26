@@ -1,6 +1,6 @@
 ﻿namespace LittleWarGameClient
 {
-    partial class Form1
+    partial class GameForm
     {
         /// <summary>
         ///  Required designer variable.
@@ -29,34 +29,17 @@
         private void InitializeComponent()
         {
             components = new System.ComponentModel.Container();
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
-            webView = new Microsoft.Web.WebView2.WinForms.WebView2();
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(GameForm));
             loaderImage = new PictureBox();
             loadingPanel = new Panel();
             loadingText = new TextBox();
             mainImage = new PictureBox();
             loadingTimer = new System.Windows.Forms.Timer(components);
-            ((System.ComponentModel.ISupportInitialize)webView).BeginInit();
+            webView = new CefSharp.WinForms.ChromiumWebBrowser();
             ((System.ComponentModel.ISupportInitialize)loaderImage).BeginInit();
             loadingPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)mainImage).BeginInit();
             SuspendLayout();
-            // 
-            // webView
-            // 
-            webView.AllowExternalDrop = true;
-            webView.CreationProperties = null;
-            webView.DefaultBackgroundColor = Color.Black;
-            webView.Dock = DockStyle.Fill;
-            webView.Location = new Point(0, 0);
-            webView.Margin = new Padding(0);
-            webView.Name = "webView";
-            webView.Size = new Size(1264, 681);
-            webView.TabIndex = 0;
-            webView.ZoomFactor = 1D;
-            webView.NavigationStarting += webView_NavigationStarting;
-            webView.NavigationCompleted += webView_NavigationCompleted;
-            webView.WebMessageReceived += webView_WebMessageReceived;
             // 
             // loaderImage
             // 
@@ -78,6 +61,7 @@
             loadingPanel.Controls.Add(mainImage);
             loadingPanel.Controls.Add(loaderImage);
             loadingPanel.Dock = DockStyle.Fill;
+            loadingPanel.ForeColor = Color.White;
             loadingPanel.Location = new Point(0, 0);
             loadingPanel.Name = "loadingPanel";
             loadingPanel.Size = new Size(1264, 681);
@@ -118,23 +102,38 @@
             loadingTimer.Interval = 1000;
             loadingTimer.Tick += loadingTimer_Tick;
             // 
-            // Form1
+            // webView
+            // 
+            webView.ActivateBrowserOnCreation = true;
+            webView.Dock = DockStyle.Fill;
+            webView.Location = new Point(0, 0);
+            webView.Margin = new Padding(0);
+            webView.Name = "webView";
+            webView.Size = new Size(1264, 681);
+            webView.TabIndex = 3;
+            webView.LoadingStateChanged += webView_LoadingStateChanged;
+            webView.JavascriptMessageReceived += webView_JavascriptMessageReceived;
+            // 
+            // GameForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = Color.Black;
             ClientSize = new Size(1264, 681);
-            Controls.Add(loadingPanel);
             Controls.Add(webView);
+            Controls.Add(loadingPanel);
+            DoubleBuffered = true;
+            ForeColor = Color.FromArgb(0, 192, 0);
             Icon = (Icon)resources.GetObject("$this.Icon");
             MinimumSize = new Size(1280, 720);
-            Name = "Form1";
+            Name = "GameForm";
             Text = "Littlewargame";
             Activated += Form1_Activated;
             FormClosing += Form1_FormClosing;
+            Load += GameForm_Load;
             ResizeEnd += Form1_ResizeEnd;
+            LocationChanged += GameForm_LocationChanged;
             Resize += Form1_Resize;
-            ((System.ComponentModel.ISupportInitialize)webView).EndInit();
             ((System.ComponentModel.ISupportInitialize)loaderImage).EndInit();
             loadingPanel.ResumeLayout(false);
             loadingPanel.PerformLayout();
@@ -143,12 +142,11 @@
         }
 
         #endregion
-
-        private Microsoft.Web.WebView2.WinForms.WebView2 webView;
         private PictureBox loaderImage;
         private Panel loadingPanel;
         private PictureBox mainImage;
         private TextBox loadingText;
         private System.Windows.Forms.Timer loadingTimer;
+        private CefSharp.WinForms.ChromiumWebBrowser webView;
     }
 }
