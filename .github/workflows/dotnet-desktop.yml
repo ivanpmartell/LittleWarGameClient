@@ -55,6 +55,18 @@ jobs:
         github_token: ${{ secrets.TOKEN }}
         default_bump: minor
 
+    - name: Create a GitHub release
+      uses: actions/create-release@v1
+      id: create_release
+      with:
+        draft: false
+        prerelease: false
+        release_name: Release ${{ steps.tag_version.outputs.new_tag }}
+        tag_name: ${{ steps.tag_version.outputs.new_tag }}
+        body: ${{ steps.tag_version.outputs.changelog }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.TOKEN }}
+
   build:
     needs: prepare
     strategy:
@@ -99,7 +111,7 @@ jobs:
 
     # Create the app package by building and packaging the Windows Application Packaging project
     - name: Create the app package
-      run: dotnet publish $env:Solution_Name -c $env:Configuration /p:Platform=$env:Platform /p:Version=${{ steps.tag_version.outputs.new_version }} /p:AssemblyVersion=${{ steps.tag_version.outputs.new_version }}
+      run: dotnet publish $env:Solution_Name -c $env:Configuration /p:Platform=$env:Platform /p:Version=${{ prepare.steps.tag_version.outputs.new_version }} /p:AssemblyVersion=${{ prepare.steps.tag_version.outputs.new_version }}
       env:
         Configuration: ${{ matrix.configuration }}
         Platform: ${{ matrix.platform }}
@@ -112,18 +124,6 @@ jobs:
       env:
         Configuration: ${{ matrix.configuration }}
         Platform: ${{ matrix.platform }}
-
-    - name: Create a GitHub release
-      uses: actions/create-release@v1
-      id: create_release
-      with:
-        draft: false
-        prerelease: false
-        release_name: Release ${{ steps.tag_version.outputs.new_tag }}
-        tag_name: ${{ steps.tag_version.outputs.new_tag }}
-        body: ${{ steps.tag_version.outputs.changelog }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.TOKEN }}
         
     - name: upload windows artifact
       uses: actions/upload-release-asset@v1
@@ -131,7 +131,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.TOKEN }}
         Platform: ${{ matrix.platform }}
       with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        upload_url: ${{ prepare.steps.create_release.outputs.upload_url }}
         asset_path: lwg_client${{ env.Platform }}.zip
         asset_name: lwg_client${{ env.Platform }}.zip
         asset_content_type: application/zip
