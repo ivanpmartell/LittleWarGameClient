@@ -111,10 +111,11 @@ jobs:
 
     # Create the app package by building and packaging the Windows Application Packaging project
     - name: Create the app package
-      run: dotnet publish $env:Solution_Name -c $env:Configuration /p:Platform=$env:Platform /p:Version=${{ needs.prepare.steps.tag_version.outputs.new_version }} /p:AssemblyVersion=${{ needs.prepare.steps.tag_version.outputs.new_version }}
+      run: dotnet publish $env:Solution_Name -c $env:Configuration /p:Platform=$env:Platform /p:Version=$env:Version /p:AssemblyVersion=$env:Version
       env:
         Configuration: ${{ matrix.configuration }}
         Platform: ${{ matrix.platform }}
+        Version: ${{ needs.prepare.steps.tag_version.outputs.new_version }}
 
     - name: Zip built artifacts
       uses: vimtor/action-zip@v1
