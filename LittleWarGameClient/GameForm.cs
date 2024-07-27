@@ -54,10 +54,10 @@ namespace LittleWarGameClient
             Cef.Initialize(cefSettings);
             webView.KeyboardHandler = kbHandler;
             webView.RequestHandler = new RequestInterceptor();
+            webView.DownloadHandler = new DownloadInterceptor();
             webView.LoadUrl(baseUrl);
             loadingPanel.SetDoubleBuffered();
             loadingPanel.BringToFront();
-            //Path.Join(path, "downloads");
             //webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
             //webView.CoreWebView2.Settings.AreBrowserAcceleratorKeysEnabled = true;
             //webView.CoreWebView2.Settings.IsStatusBarEnabled = false;
@@ -77,26 +77,6 @@ namespace LittleWarGameClient
                 webView.Capture = false;
                 Cursor.Clip = Rectangle.Empty;
             }
-        }
-
-        private void Form1_Activated(object sender, EventArgs e)
-        {
-            CaptureCursor();
-            ResizeGameWindows();
-        }
-
-        private void Form1_ResizeEnd(object sender, EventArgs e)
-        {
-            CaptureCursor();
-            settings.SetWindowSize(Size);
-            settings.SaveAsync();
-        }
-
-        private void Form1_Resize(object sender, EventArgs e)
-        {
-            overlayForm.Size = webView.Size;
-            CaptureCursor();
-            ResizeGameWindows();
         }
 
         private void ResizeGameWindows()
@@ -128,15 +108,6 @@ namespace LittleWarGameClient
                 wasSmallWindow = false;
                 ElementMessage.CallJSFunc(webView, "setNormalWindowSizes");
             }
-        }
-
-        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
-        {
-            audioMngr.DestroySession();
-            OverlayForm.InvokeUI(() =>
-            {
-                overlayForm.Close();
-            });
         }
 
         private void loadingTimer_Tick(object sender, EventArgs e)
@@ -242,6 +213,42 @@ namespace LittleWarGameClient
         {
             if (thisForm != null)
                 thisForm.BeginInvoke(new MethodInvoker(a));
+        }
+
+        private void GameForm_Deactivate(object sender, EventArgs e)
+        {
+            if (!OverlayForm.IsActivated)
+                overlayForm.Visible = false;
+        }
+
+        private void GameForm_Activated(object sender, EventArgs e)
+        {
+            CaptureCursor();
+            ResizeGameWindows();
+            overlayForm.Visible = true;
+        }
+
+        private void GameForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            audioMngr.DestroySession();
+            OverlayForm.InvokeUI(() =>
+            {
+                overlayForm.Close();
+            });
+        }
+
+        private void GameForm_Resize(object sender, EventArgs e)
+        {
+            overlayForm.Size = webView.Size;
+            CaptureCursor();
+            ResizeGameWindows();
+        }
+
+        private void GameForm_ResizeEnd(object sender, EventArgs e)
+        {
+            CaptureCursor();
+            settings.SetWindowSize(Size);
+            settings.SaveAsync();
         }
     }
 }

@@ -20,7 +20,6 @@ namespace LittleWarGameClient
         internal Version? LatestVersion
         {
             get => latestVersion;
-
             set
             {
                 if (latestVersion != value)
@@ -90,7 +89,7 @@ namespace LittleWarGameClient
             }
             catch (Exception)
             {
-                MessageBox.Show("Could not obtain the latest version");
+                OverlayForm.OverlayMessage = "Could not obtain the latest version";
                 return null;
             }
         }

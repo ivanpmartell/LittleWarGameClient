@@ -1,4 +1,5 @@
 ﻿using CefSharp;
+using CefSharp.Handler;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace LittleWarGameClient
 {
-    internal class RequestInterceptor : CefSharp.Handler.RequestHandler
+    internal class RequestInterceptor : RequestHandler
     {
         protected override IResourceRequestHandler? GetResourceRequestHandler(IWebBrowser chromiumWebBrowser, IBrowser browser, IFrame frame, IRequest request, bool isNavigation, bool isDownload, string requestInitiator, ref bool disableDefaultHandling)
         {
@@ -20,7 +21,7 @@ namespace LittleWarGameClient
         }
     }
 
-    internal class OverrideJavascript : CefSharp.Handler.ResourceRequestHandler
+    internal class OverrideJavascript : ResourceRequestHandler
     {
         protected override IResourceHandler GetResourceHandler(IWebBrowser chromiumWebBrowser, IBrowser browser, IFrame frame, IRequest request)
         {

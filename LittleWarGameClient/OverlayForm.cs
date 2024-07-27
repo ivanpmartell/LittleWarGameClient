@@ -18,10 +18,30 @@ namespace LittleWarGameClient
     public partial class OverlayForm : D2DForm
     {
         private static OverlayForm? thisForm;
+        private DateTime lastChanged;
+        private static string? overlayMessage;
+        internal static string? OverlayMessage
+        {
+            get => overlayMessage;
+
+            set
+            {
+                if (overlayMessage != value)
+                {
+                    overlayMessage = value;
+                    OverlayForm.OverlayMessageChanged(null, EventArgs.Empty);
+                }
+            }
+        }
         internal static bool IsActivated { get; private set; }
+
+        public static event EventHandler? OverlayMessageChanged;
+
         public OverlayForm()
         {
+            OverlayMessageChanged += MessageChanged;
             thisForm = this;
+            overlayMessage = "";
             IsActivated = false;
             InitializeComponent();
             try
@@ -32,6 +52,27 @@ namespace LittleWarGameClient
                 SteamFriends.OnGameOverlayActivated += OnGameOverlayActivated;
             }
             catch { }
+        }
+
+        private void MessageChanged(object? sender, EventArgs e)
+        {
+            lastChanged = DateTime.Now;
+        }
+
+        protected override void OnRender(D2DGraphics g)
+        {
+            if (overlayMessage != null && overlayMessage != "")
+            {
+                g.DrawText($" >{overlayMessage}", D2DColor.Yellow, Font, 0, 25);
+            }
+        }
+
+        private void textTimer_Tick(object sender, EventArgs e)
+        {
+             if (lastChanged.AddSeconds(3) < DateTime.Now)
+            {
+                overlayMessage = "";
+            }
         }
 
         private void OnGameOverlayActivated(bool overlayActivated)

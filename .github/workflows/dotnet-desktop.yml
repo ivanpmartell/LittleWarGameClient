@@ -51,6 +51,7 @@ jobs:
     strategy:
       matrix:
         configuration: [Release]
+        platform: [x86, x64]
 
     runs-on: windows-latest  # For a list of available runner types, refer to
                              # https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idruns-on
@@ -71,7 +72,7 @@ jobs:
       uses: mathieudutour/github-tag-action@v6.0
       with:
         github_token: ${{ secrets.TOKEN }}
-        default_bump: patch
+        default_bump: minor
 
     # Install the .NET Core workload
     - name: Install .NET Core
@@ -89,23 +90,26 @@ jobs:
 
     # Restore the application to populate the obj folder with RuntimeIdentifiers
     - name: Restore the application
-      run: msbuild $env:Solution_Name /t:Restore /p:Configuration=$env:Configuration
+      run: msbuild $env:Solution_Name /t:Restore /p:Configuration=$env:Configuration /p:Platform=$env:Platform
       env:
         Configuration: ${{ matrix.configuration }}
+        Platform: ${{ matrix.platform }}
 
     # Create the app package by building and packaging the Windows Application Packaging project
     - name: Create the app package
-      run: dotnet publish $env:Solution_Name -c $env:Configuration /p:Version=${{ steps.tag_version.outputs.new_version }} /p:AssemblyVersion=${{ steps.tag_version.outputs.new_version }}
+      run: dotnet publish $env:Solution_Name -c $env:Configuration /p:Platform=$env:Platform /p:Version=${{ steps.tag_version.outputs.new_version }} /p:AssemblyVersion=${{ steps.tag_version.outputs.new_version }}
       env:
         Configuration: ${{ matrix.configuration }}
+        Platform: ${{ matrix.platform }}
 
     - name: Zip built artifacts
       uses: vimtor/action-zip@v1
       with:
-        files: ${{ env.Wap_Project_Directory }}\bin\${{ env.Configuration }}\net6.0-windows7.0\publish
-        dest: lwg_client.zip
+        files: ${{ env.Wap_Project_Directory }}\bin\${{ $env:Platform }}\${{ env.Configuration }}\net6.0-windows7.0\win-${{ $env:Platform }}\publish
+        dest: lwg_client${{ $env:Platform }}.zip
       env:
         Configuration: ${{ matrix.configuration }}
+        Platform: ${{ matrix.platform }}
 
     - name: Create a GitHub release
       uses: actions/create-release@v1
@@ -123,8 +127,9 @@ jobs:
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.TOKEN }}
+        Platform: ${{ matrix.platform }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: lwg_client.zip
-        asset_name: lwg_client.zip
+        asset_path: lwg_client${{ $env:Platform }}.zip
+        asset_name: lwg_client${{ $env:Platform }}.zip
         asset_content_type: application/zip

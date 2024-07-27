@@ -28,18 +28,28 @@
         /// </summary>
         private void InitializeComponent()
         {
+            components = new System.ComponentModel.Container();
+            textTimer = new System.Windows.Forms.Timer(components);
             SuspendLayout();
+            // 
+            // textTimer
+            // 
+            textTimer.Enabled = true;
+            textTimer.Interval = 1000;
+            textTimer.Tick += textTimer_Tick;
             // 
             // OverlayForm
             // 
             AnimationDraw = true;
-            AutoScaleDimensions = new SizeF(7F, 15F);
-            AutoScaleMode = AutoScaleMode.Font;
+            AutoScaleMode = AutoScaleMode.None;
             BackColor = Color.Black;
-            ClientSize = new Size(800, 450);
+            ClientSize = new Size(1445, 681);
+            Font = new Font("LCD Solid", 21.75F, FontStyle.Regular, GraphicsUnit.Point);
             ForeColor = Color.White;
             FormBorderStyle = FormBorderStyle.None;
             Location = new Point(0, 0);
+            Margin = new Padding(3, 2, 3, 2);
+            MinimumSize = new Size(1264, 681);
             Name = "OverlayForm";
             ShowIcon = false;
             ShowInTaskbar = false;
@@ -51,5 +61,6 @@
         }
 
         #endregion
+        private System.Windows.Forms.Timer textTimer;
     }
 }

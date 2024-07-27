@@ -128,12 +128,13 @@
             MinimumSize = new Size(1280, 720);
             Name = "GameForm";
             Text = "Littlewargame";
-            Activated += Form1_Activated;
-            FormClosing += Form1_FormClosing;
+            Activated += GameForm_Activated;
+            Deactivate += GameForm_Deactivate;
+            FormClosing += GameForm_FormClosing;
             Load += GameForm_Load;
-            ResizeEnd += Form1_ResizeEnd;
+            ResizeEnd += GameForm_ResizeEnd;
             LocationChanged += GameForm_LocationChanged;
-            Resize += Form1_Resize;
+            Resize += GameForm_Resize;
             ((System.ComponentModel.ISupportInitialize)loaderImage).EndInit();
             loadingPanel.ResumeLayout(false);
             loadingPanel.PerformLayout();
