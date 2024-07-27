@@ -225,7 +225,8 @@ namespace LittleWarGameClient
         {
             CaptureCursor();
             ResizeGameWindows();
-            overlayForm.Visible = true;
+            if (!overlayForm.IsDisposed)
+                overlayForm.Visible = true;
         }
 
         private void GameForm_FormClosing(object sender, FormClosingEventArgs e)

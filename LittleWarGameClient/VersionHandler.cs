@@ -39,6 +39,9 @@ namespace LittleWarGameClient
             settings = s;
             var productVersion = System.Windows.Forms.Application.ProductVersion.Split('+').First();
             CurrentVersion = new Version(productVersion);
+#if DEBUG
+            CurrentVersion = new Version(0,0,0);
+#endif
             LatestVersionObtained += CheckForUpdate;
             PerformCheck();
         }
@@ -56,7 +59,12 @@ namespace LittleWarGameClient
             if (LatestVersion != null && RequiresUpdate())
                 if (DialogResult.OK == MessageBox.Show("An update is available. Press OK to download it and exit the game", "Update", MessageBoxButtons.OKCancel))
                 {
-                    Process.Start(new ProcessStartInfo($"https://github.com/ivanpmartell/LittleWarGameClient/releases/download/v{LatestVersion}/lwg_client.zip") { UseShellExecute = true });
+                    var updateUrl = $"https://github.com/ivanpmartell/LittleWarGameClient/releases/download/v{LatestVersion}/";
+                    if (Environment.Is64BitProcess)
+                        updateUrl += "lwg_clientx64.zip";
+                    else
+                        updateUrl += "lwg_clientx86.zip";
+                    Process.Start(new ProcessStartInfo(updateUrl) { UseShellExecute = true });
                     System.Windows.Forms.Application.Exit();
                 }
             settings.SetLastUpdateChecked(DateTime.Now.Date);

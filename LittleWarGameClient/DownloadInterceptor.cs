@@ -25,7 +25,7 @@ namespace LittleWarGameClient
                         n++;
                         var ext = Path.GetExtension(downloadItem.SuggestedFileName);
                         var filenameNoExt = Path.GetFileNameWithoutExtension(downloadItem.SuggestedFileName);
-                        completePath = Path.Join(downloadsDirPath, $"{filenameNoExt}({n}).{ext}");
+                        completePath = Path.Join(downloadsDirPath, $"{filenameNoExt}({n}){ext}");
                     }
                     callback.Continue(completePath, showDialog: false);
                     return true;
