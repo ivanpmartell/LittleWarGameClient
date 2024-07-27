@@ -92,14 +92,14 @@ jobs:
 
     # Restore the application to populate the obj folder with RuntimeIdentifiers
     - name: Restore the application
-      run: msbuild $env:Solution_Name /t:Restore /p:Configuration=$env:Configuration /p:Platform=$env.Platform
+      run: msbuild $env:Solution_Name /t:Restore /p:Configuration=$env:Configuration /p:Platform=$env:Platform
       env:
         Configuration: ${{ matrix.configuration }}
         Platform: ${{ matrix.platform }}
 
     # Create the app package by building and packaging the Windows Application Packaging project
     - name: Create the app package
-      run: dotnet publish $env:Solution_Name -c $env:Configuration /p:Platform=$env.Platform /p:Version=${{ steps.tag_version.outputs.new_version }} /p:AssemblyVersion=${{ steps.tag_version.outputs.new_version }}
+      run: dotnet publish $env:Solution_Name -c $env:Configuration /p:Platform=$env:Platform /p:Version=${{ steps.tag_version.outputs.new_version }} /p:AssemblyVersion=${{ steps.tag_version.outputs.new_version }}
       env:
         Configuration: ${{ matrix.configuration }}
         Platform: ${{ matrix.platform }}
