@@ -111,7 +111,7 @@ jobs:
 
     # Create the app package by building and packaging the Windows Application Packaging project
     - name: Create the app package
-      run: dotnet publish $env:Solution_Name -c $env:Configuration /p:Platform=$env:Platform /p:Version=${{ prepare.steps.tag_version.outputs.new_version }} /p:AssemblyVersion=${{ prepare.steps.tag_version.outputs.new_version }}
+      run: dotnet publish $env:Solution_Name -c $env:Configuration /p:Platform=$env:Platform /p:Version=${{ needs.prepare.steps.tag_version.outputs.new_version }} /p:AssemblyVersion=${{ needs.prepare.steps.tag_version.outputs.new_version }}
       env:
         Configuration: ${{ matrix.configuration }}
         Platform: ${{ matrix.platform }}
@@ -131,7 +131,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.TOKEN }}
         Platform: ${{ matrix.platform }}
       with:
-        upload_url: ${{ prepare.steps.create_release.outputs.upload_url }}
+        upload_url: ${{ needs.prepare.steps.create_release.outputs.upload_url }}
         asset_path: lwg_client${{ env.Platform }}.zip
         asset_name: lwg_client${{ env.Platform }}.zip
         asset_content_type: application/zip
