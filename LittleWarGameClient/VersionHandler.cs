@@ -61,9 +61,9 @@ namespace LittleWarGameClient
                 {
                     var updateUrl = $"https://github.com/ivanpmartell/LittleWarGameClient/releases/download/v{LatestVersion}/";
                     if (Environment.Is64BitProcess)
-                        updateUrl += "lwg_clientx64.zip";
+                        updateUrl += "update_x64.zip";
                     else
-                        updateUrl += "lwg_clientx86.zip";
+                        updateUrl += "update_x86.zip";
                     Process.Start(new ProcessStartInfo(updateUrl) { UseShellExecute = true });
                     System.Windows.Forms.Application.Exit();
                 }

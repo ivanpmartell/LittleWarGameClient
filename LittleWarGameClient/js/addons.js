@@ -148,6 +148,7 @@ addons.init = {
     function(clientVersion, mouseLock, volume) {
         this.handleConnectionError();
         this.addExitButton();
+        this.addRefreshButton();
         this.resizeInfoWindow();
         this.moveLoadingText();
         this.changeQuitButtonText();
@@ -244,6 +245,19 @@ addons.init = {
         var options = document.getElementById("optionsWindow");
         var title = options.getElementsByTagName('h2')[0];
         title.innerText = `${title.innerText} [Client v${clientVersion}]`;
+    },
+
+    addRefreshButton: function () {
+        var refreshId = "refreshButton";
+        if (!document.getElementById(refreshId)) {
+            var refreshButton = document.createElement("button");
+            refreshButton.id = refreshId;
+            refreshButton.innerText = "↻";
+            refreshButton.setAttribute("style", "color: lightgreen;");
+            var optionButtons = document.getElementById("optionsButtonsDiv");
+            optionButtons.insertBefore(refreshButton, optionButtons.firstChild);
+            refreshButton.onclick = function () { location.reload(); };
+        }
     },
 
     addExitButton: function () {

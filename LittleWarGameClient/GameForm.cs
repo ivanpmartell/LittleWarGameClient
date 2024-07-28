@@ -50,6 +50,9 @@ namespace LittleWarGameClient
         {
             var path = Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath);
             var cefSettings = new CefSettings();
+            cefSettings.CefCommandLineArgs.Add("no-proxy-server", "1");
+            cefSettings.CefCommandLineArgs.Add("disable-plugins-discovery", "1");
+            cefSettings.CefCommandLineArgs.Add("disable-extensions", "1");
             cefSettings.RootCachePath = Path.Join(path, "data");
             Cef.Initialize(cefSettings);
             webView.KeyboardHandler = kbHandler;
@@ -58,9 +61,6 @@ namespace LittleWarGameClient
             webView.LoadUrl(baseUrl);
             loadingPanel.SetDoubleBuffered();
             loadingPanel.BringToFront();
-            //webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
-            //webView.CoreWebView2.Settings.AreBrowserAcceleratorKeysEnabled = true;
-            //webView.CoreWebView2.Settings.IsStatusBarEnabled = false;
         }
 
         private void CaptureCursor()
