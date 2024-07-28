@@ -121,7 +121,7 @@ jobs:
         Version: ${{ needs.prepare.outputs.outputVersion }}
 
     - name: Zip complete build artifacts
-      uses: vimtor/action-zip@v1
+      uses: vimtor/action-zip@v1.2
       with:
         files: ${{ env.Wap_Project_Directory }}\bin\${{ env.Platform }}\${{ env.Configuration }}\net6.0-windows7.0\win-${{ env.Platform }}\publish
         dest: lwg_client${{ env.Platform }}.zip
@@ -130,11 +130,12 @@ jobs:
         Platform: ${{ matrix.platform }}
 
     - name: Zip update artifacts
-      uses: vimtor/action-zip@v1
+      uses: thedoctor0/zip-release@0.7.6
       with:
-        files: ${{ env.PublishedDir }}\LittleWarGameClient.exe ${{ env.PublishedDir }}\LittleWarGameClient.dll ${{ env.PublishedDir }}\js
-        recursive: false
-        dest: update_${{ env.Platform }}.zip
+        type: 'zip'
+        filename: update_${{ env.Platform }}.zip
+        directory: ${{ env.PublishedDir }}
+        path: LittleWarGameClient.* js
       env:
         Platform: ${{ matrix.platform }}
         PublishedDir: ${{ env.Wap_Project_Directory }}\bin\${{ matrix.platform }}\${{ matrix.configuration }}\net6.0-windows7.0\win-${{ matrix.platform }}\publish
