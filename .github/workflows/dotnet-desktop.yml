@@ -133,6 +133,7 @@ jobs:
       uses: vimtor/action-zip@v1
       with:
         files: ${{ env.PublishedDir }}\LittleWarGameClient.exe ${{ env.PublishedDir }}\LittleWarGameClient.dll ${{ env.PublishedDir }}\js
+        recursive: false
         dest: update_${{ env.Platform }}.zip
       env:
         Platform: ${{ matrix.platform }}
