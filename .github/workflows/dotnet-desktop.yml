@@ -156,8 +156,9 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.TOKEN }}
         Platform: ${{ matrix.platform }}
+        PublishedDir: ${{ env.Wap_Project_Directory }}\bin\${{ matrix.platform }}\${{ matrix.configuration }}\net6.0-windows7.0\win-${{ matrix.platform }}\publish
       with:
         upload_url: ${{ needs.prepare.outputs.outputUrl }}
-        asset_path: update_${{ env.Platform }}.zip
+        asset_path: ${{ env.PublishedDir }}\update_${{ env.Platform }}.zip
         asset_name: update_${{ env.Platform }}.zip
         asset_content_type: application/zip
