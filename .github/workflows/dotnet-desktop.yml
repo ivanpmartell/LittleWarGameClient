@@ -138,7 +138,7 @@ jobs:
         Platform: ${{ matrix.platform }}
         PublishedDir: ${{ env.Wap_Project_Directory }}\bin\${{ matrix.platform }}\${{ matrix.configuration }}\net6.0-windows7.0\win-${{ matrix.platform }}\publish
         
-    - name: upload windows artifact
+    - name: upload complete build artifact
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.TOKEN }}
@@ -147,4 +147,15 @@ jobs:
         upload_url: ${{ needs.prepare.outputs.outputUrl }}
         asset_path: lwg_client${{ env.Platform }}.zip
         asset_name: lwg_client${{ env.Platform }}.zip
+        asset_content_type: application/zip
+
+    - name: upload update only artifact
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.TOKEN }}
+        Platform: ${{ matrix.platform }}
+      with:
+        upload_url: ${{ needs.prepare.outputs.outputUrl }}
+        asset_path: update_${{ env.Platform }}.zip
+        asset_name: update_${{ env.Platform }}.zip
         asset_content_type: application/zip
