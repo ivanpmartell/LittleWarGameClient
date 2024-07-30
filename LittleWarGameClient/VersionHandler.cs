@@ -1,4 +1,5 @@
-﻿using Octokit;
+﻿using CefSharp;
+using Octokit;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -65,7 +66,7 @@ namespace LittleWarGameClient
                     else
                         updateUrl += "update_x86.zip";
                     Process.Start(new ProcessStartInfo(updateUrl) { UseShellExecute = true });
-                    System.Windows.Forms.Application.Exit();
+                    GameForm.Instance.Close();
                 }
             settings.SetLastUpdateChecked(DateTime.Now.Date);
             settings.SaveAsync();
@@ -97,7 +98,7 @@ namespace LittleWarGameClient
             }
             catch (Exception)
             {
-                OverlayForm.OverlayMessage = "Could not obtain the latest version";
+                OverlayForm.Instance.AddOverlayMessage("updateCheck", new Notification("Network Error: Could not obtain check for updates"));
                 return null;
             }
         }

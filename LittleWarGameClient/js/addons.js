@@ -252,8 +252,9 @@ addons.init = {
         if (!document.getElementById(refreshId)) {
             var refreshButton = document.createElement("button");
             refreshButton.id = refreshId;
+            refreshButton.title = "Reload Game";
             refreshButton.innerText = "↻";
-            refreshButton.setAttribute("style", "color: lightgreen;");
+          refreshButton.setAttribute("style", "color: lightgreen; padding-top: 1.5px;");
             var optionButtons = document.getElementById("optionsButtonsDiv");
             optionButtons.insertBefore(refreshButton, optionButtons.firstChild);
             refreshButton.onclick = function () { location.reload(); };

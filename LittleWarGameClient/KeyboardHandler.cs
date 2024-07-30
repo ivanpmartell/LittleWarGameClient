@@ -8,13 +8,11 @@ namespace LittleWarGameClient
 {
     internal class KeyboardHandler : IKeyboardHandler
     {
-        private readonly Fullscreen fullScreen;
         private readonly Dictionary<Keys, MethodInfo?> hotKeys = new Dictionary<Keys, MethodInfo?>();
 
-        internal KeyboardHandler(Fullscreen fs, Settings settings)
+        internal KeyboardHandler(Settings settings)
         {
             InitHotkeys(settings);
-            fullScreen = fs;
         }
 
         private void InitHotkeys(Settings settings)
@@ -59,9 +57,9 @@ namespace LittleWarGameClient
 
         private void FullscreenHotkeyFunc(ChromiumWebBrowser sender)
         {
-            GameForm.InvokeUI(() =>
+            GameForm.Instance.InvokeUI(() =>
             {
-                fullScreen.Toggle();
+                GameForm.Instance.ToggleFullscreen();
             });
         }
 
@@ -82,7 +80,7 @@ namespace LittleWarGameClient
 
         public bool OnPreKeyEvent(IWebBrowser webView, IBrowser browser, KeyType type, int windowsKeyCode, int nativeKeyCode, CefEventFlags modifiers, bool isSystemKey, ref bool isKeyboardShortcut)
         {
-        if (OverlayForm.IsActivated)
+        if (OverlayForm.Instance.IsActivated)
             {
                 return true;
             }

@@ -56,7 +56,7 @@ jobs:
       uses: mathieudutour/github-tag-action@v6.0
       with:
         github_token: ${{ secrets.TOKEN }}
-        default_bump: patch
+        default_bump: minor
 
     - name: Create a GitHub release
       uses: actions/create-release@v1
@@ -135,7 +135,7 @@ jobs:
         type: 'zip'
         filename: update_${{ env.Platform }}.zip
         directory: ${{ env.PublishedDir }}
-        path: LittleWarGameClient.* js
+        path: LittleWarGameClient.* js Loyc.*
       env:
         Platform: ${{ matrix.platform }}
         PublishedDir: ${{ env.Wap_Project_Directory }}\bin\${{ matrix.platform }}\${{ matrix.configuration }}\net6.0-windows7.0\win-${{ matrix.platform }}\publish

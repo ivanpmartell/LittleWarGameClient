@@ -1,47 +1,46 @@
-﻿using CefSharp;
+﻿using Loyc.Collections;
 using nud2dlib;
 using nud2dlib.Windows.Forms;
 using Steamworks;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Diagnostics;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 
 namespace LittleWarGameClient
 {
-    public partial class OverlayForm : D2DForm
+    internal struct Notification
     {
-        private static OverlayForm? thisForm;
-        private DateTime lastChanged;
-        private static string? overlayMessage;
-        internal static string? OverlayMessage
-        {
-            get => overlayMessage;
+        internal string message { get; }
+        internal DateTime postedTime { get; }
 
-            set
+        internal Notification(string msg)
+        {
+            this.message = msg;
+            this.postedTime = DateTime.Now;
+        }
+    }
+
+    internal partial class OverlayForm : D2DForm
+    {
+        private static OverlayForm? formInstance;
+        internal static OverlayForm Instance
+        {
+            get
             {
-                if (overlayMessage != value)
-                {
-                    overlayMessage = value;
-                    OverlayForm.OverlayMessageChanged(null, EventArgs.Empty);
-                }
+                if (formInstance == null || formInstance.IsDisposed)
+                    formInstance = new OverlayForm();
+                return formInstance;
             }
         }
-        internal static bool IsActivated { get; private set; }
 
-        public static event EventHandler? OverlayMessageChanged;
-
-        public OverlayForm()
+        private BDictionary<string, Notification> overlayMessages;
+        internal void AddOverlayMessage(string name, Notification notification)
         {
-            OverlayMessageChanged += MessageChanged;
-            thisForm = this;
-            overlayMessage = "";
+            overlayMessages[name] = new Notification(notification.message);
+        }
+
+        internal bool IsActivated { get; private set; }
+
+        internal OverlayForm()
+        {
+            overlayMessages = new BDictionary<string, Notification>();
             IsActivated = false;
             InitializeComponent();
             try
@@ -54,24 +53,21 @@ namespace LittleWarGameClient
             catch { }
         }
 
-        private void MessageChanged(object? sender, EventArgs e)
-        {
-            lastChanged = DateTime.Now;
-        }
-
         protected override void OnRender(D2DGraphics g)
         {
-            if (overlayMessage != null && overlayMessage != "")
+            for (int i = 0; i < overlayMessages.Count; i++)
             {
-                g.DrawText($" >{overlayMessage}", D2DColor.Yellow, Font, 0, 25);
+                var notification = overlayMessages[i].Value.message;
+                g.DrawText($" >{notification}", D2DColor.Yellow, Font, 0, (i+1)*30);
             }
         }
 
         private void textTimer_Tick(object sender, EventArgs e)
         {
-             if (lastChanged.AddSeconds(3) < DateTime.Now)
+            for (int i = 0; i < overlayMessages.Count; i++)
             {
-                overlayMessage = "";
+                if (overlayMessages[i].Value.postedTime.AddSeconds(6) < DateTime.Now)
+                    overlayMessages.RemoveAt(i);
             }
         }
 
@@ -103,16 +99,22 @@ namespace LittleWarGameClient
             return;
         }
 
-        internal static void InvokeUI(Action a)
+        internal void InvokeUI(Action a)
         {
-            if (thisForm != null)
-                thisForm.BeginInvoke(new MethodInvoker(a));
+            if (formInstance != null && formInstance.InvokeRequired)
+            {
+                if (formInstance.IsHandleCreated)
+                    formInstance.BeginInvoke(new MethodInvoker(a));
+            }
+            else
+            {
+                a.Invoke();
+            }
         }
 
         private void OverlayForm_Load(object sender, EventArgs e)
         {
-            var gameForm = new GameForm(this);
-            gameForm.Show();
+            GameForm.Instance.ShowDialog();
         }
     }
 }

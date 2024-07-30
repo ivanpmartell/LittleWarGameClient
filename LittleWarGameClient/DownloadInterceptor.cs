@@ -37,9 +37,9 @@ namespace LittleWarGameClient
         protected override void OnDownloadUpdated(IWebBrowser chromiumWebBrowser, IBrowser browser, DownloadItem downloadItem, IDownloadItemCallback callback)
         {
             if (downloadItem.IsInProgress)
-                OverlayForm.OverlayMessage = $"Download progress: {downloadItem.PercentComplete}%";
+                OverlayForm.Instance.AddOverlayMessage($"download{downloadItem.Id}", new Notification($"Download progress: {downloadItem.PercentComplete}%"));
             else if (downloadItem.IsComplete)
-                OverlayForm.OverlayMessage = $"Download completed";
+                OverlayForm.Instance.AddOverlayMessage($"download{downloadItem.Id}", new Notification("Download completed"));
         }
     }
 }

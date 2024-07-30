@@ -1,4 +1,7 @@
-﻿namespace LittleWarGameClient
+﻿using Loyc.Syntax;
+using System.Drawing.Text;
+
+namespace LittleWarGameClient
 {
     partial class GameForm
     {
@@ -35,7 +38,7 @@
             loadingText = new TextBox();
             mainImage = new PictureBox();
             loadingTimer = new System.Windows.Forms.Timer(components);
-            webView = new CefSharp.WinForms.ChromiumWebBrowser();
+            webBrowser = new CefSharp.WinForms.ChromiumWebBrowser();
             ((System.ComponentModel.ISupportInitialize)loaderImage).BeginInit();
             loadingPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)mainImage).BeginInit();
@@ -73,7 +76,7 @@
             loadingText.Anchor = AnchorStyles.None;
             loadingText.BackColor = Color.Black;
             loadingText.BorderStyle = BorderStyle.None;
-            loadingText.Font = new Font("LCD Solid", 48F, FontStyle.Regular, GraphicsUnit.Point);
+            loadingText.Font = new Font(Program.LWG_FONT, 48F, FontStyle.Regular, GraphicsUnit.Point);
             loadingText.ForeColor = Color.White;
             loadingText.Location = new Point(390, 474);
             loadingText.Name = "loadingText";
@@ -102,17 +105,16 @@
             loadingTimer.Interval = 1000;
             loadingTimer.Tick += loadingTimer_Tick;
             // 
-            // webView
+            // webBrowser
             // 
-            webView.ActivateBrowserOnCreation = true;
-            webView.Dock = DockStyle.Fill;
-            webView.Location = new Point(0, 0);
-            webView.Margin = new Padding(0);
-            webView.Name = "webView";
-            webView.Size = new Size(1264, 681);
-            webView.TabIndex = 3;
-            webView.LoadingStateChanged += webView_LoadingStateChanged;
-            webView.JavascriptMessageReceived += webView_JavascriptMessageReceived;
+            webBrowser.ActivateBrowserOnCreation = true;
+            webBrowser.Dock = DockStyle.Fill;
+            webBrowser.Location = new Point(0, 0);
+            webBrowser.Margin = new Padding(0);
+            webBrowser.Name = "webBrowser";
+            webBrowser.Size = new Size(1264, 681);
+            webBrowser.TabIndex = 3;
+            webBrowser.LoadingStateChanged += webView_LoadingStateChanged;
             // 
             // GameForm
             // 
@@ -120,7 +122,7 @@
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = Color.Black;
             ClientSize = new Size(1264, 681);
-            Controls.Add(webView);
+            Controls.Add(webBrowser);
             Controls.Add(loadingPanel);
             DoubleBuffered = true;
             ForeColor = Color.FromArgb(0, 192, 0);
@@ -148,6 +150,6 @@
         private PictureBox mainImage;
         private TextBox loadingText;
         private System.Windows.Forms.Timer loadingTimer;
-        private CefSharp.WinForms.ChromiumWebBrowser webView;
+        private CefSharp.WinForms.ChromiumWebBrowser webBrowser;
     }
 }

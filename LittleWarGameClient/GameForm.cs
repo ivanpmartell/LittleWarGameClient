@@ -18,36 +18,42 @@ namespace LittleWarGameClient
 {
     internal partial class GameForm : Form
     {
-        private static GameForm? thisForm;
-        internal static string baseUrl = @"https://littlewargame.com/play";
+        private static GameForm? formInstance;
+        internal static GameForm Instance
+        {
+            get
+            {
+                if (formInstance == null || formInstance.IsDisposed)
+                    formInstance = new GameForm();
+                return formInstance;
+            }
+        }
+
+        internal const string baseUrl = @"https://littlewargame.com/play";
         private readonly Settings settings;
-        private readonly Fullscreen fullScreen;
         private readonly KeyboardHandler kbHandler;
         private readonly VersionHandler vHandler;
         private readonly AudioManager audioMngr;
-        private readonly Form overlayForm;
+        private FormWindowState PreviousWindowState;
 
         private bool wasSmallWindow = false;
         private bool gameHasLoaded = false;
         private bool mouseLocked;
 
-        public GameForm(Form overlayForm)
+        internal GameForm()
         {
-            thisForm = this;
-            this.overlayForm = overlayForm;
             InitializeComponent();
-            audioMngr = new AudioManager(Text);
             settings = new Settings();
-            fullScreen = new Fullscreen(this, settings);
-            kbHandler = new KeyboardHandler(fullScreen, settings);
+            audioMngr = new AudioManager(Text);
+            kbHandler = new KeyboardHandler(settings);
             vHandler = new VersionHandler(settings);
-            Size = settings.GetWindowSize();
-            mouseLocked = settings.GetMouseLock();
+            InitScreen();
             InitWebView();
         }
 
         private void InitWebView()
         {
+            webBrowser.JavascriptMessageReceived += ElementMessage.JSMessageReceived;
             var path = Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath);
             var cefSettings = new CefSettings();
             cefSettings.CefCommandLineArgs.Add("no-proxy-server", "1");
@@ -55,26 +61,71 @@ namespace LittleWarGameClient
             cefSettings.CefCommandLineArgs.Add("disable-extensions", "1");
             cefSettings.RootCachePath = Path.Join(path, "data");
             Cef.Initialize(cefSettings);
-            webView.KeyboardHandler = kbHandler;
-            webView.RequestHandler = new RequestInterceptor();
-            webView.DownloadHandler = new DownloadInterceptor();
-            webView.LoadUrl(baseUrl);
+            webBrowser.KeyboardHandler = kbHandler;
+            webBrowser.RequestHandler = new RequestInterceptor();
+            webBrowser.DownloadHandler = new DownloadInterceptor();
+            webBrowser.LoadUrl(baseUrl);
             loadingPanel.SetDoubleBuffered();
             loadingPanel.BringToFront();
+        }
+
+        private void InitScreen()
+        {
+            Size = settings.GetWindowSize();
+            mouseLocked = settings.GetMouseLock();
+            PreviousWindowState = WindowState;
+            if (settings.GetFullScreen())
+                EnterFullscreen();
+            else
+                LeaveFullscreen();
+        }
+
+        internal void ToggleFullscreen()
+        {
+            bool state;
+            if (WindowState == FormWindowState.Maximized && FormBorderStyle == FormBorderStyle.None)
+            {
+                state = false;
+                LeaveFullscreen();
+            }
+            else
+            {
+                state = true;
+                EnterFullscreen();
+            }
+            settings.SetFullScreen(state);
+            settings.SaveAsync();
+        }
+
+        private void EnterFullscreen()
+        {
+            if (WindowState != FormWindowState.Maximized || FormBorderStyle != FormBorderStyle.None)
+            {
+                PreviousWindowState = WindowState;
+                WindowState = FormWindowState.Normal;
+                FormBorderStyle = FormBorderStyle.None;
+                WindowState = FormWindowState.Maximized;
+            }
+        }
+
+        private void LeaveFullscreen()
+        {
+            FormBorderStyle = FormBorderStyle.Sizable;
+            WindowState = PreviousWindowState;
         }
 
         private void CaptureCursor()
         {
             if (mouseLocked)
             {
-                webView.Capture = true;
-                var webViewBounds = new Rectangle(webView.PointToScreen(Point.Empty), webView.Size);
+                webBrowser.Capture = true;
+                var webViewBounds = new Rectangle(webBrowser.PointToScreen(Point.Empty), webBrowser.Size);
                 Cursor.Clip = webViewBounds;
                 Cursor.Current = Cursors.Default;
             }
             else
             {
-                webView.Capture = false;
+                webBrowser.Capture = false;
                 Cursor.Clip = Rectangle.Empty;
             }
         }
@@ -86,12 +137,12 @@ namespace LittleWarGameClient
                 if (Height <= 800 && !wasSmallWindow)
                 {
                     wasSmallWindow = true;
-                    ElementMessage.CallJSFunc(webView, "setSmallWindowSizes");
+                    ElementMessage.CallJSFunc(webBrowser, "setSmallWindowSizes");
                 }
                 else if (Height > 800 && wasSmallWindow)
                 {
                     wasSmallWindow = false;
-                    ElementMessage.CallJSFunc(webView, "setNormalWindowSizes");
+                    ElementMessage.CallJSFunc(webBrowser, "setNormalWindowSizes");
                 }
             }
         }
@@ -101,12 +152,12 @@ namespace LittleWarGameClient
             if (Height <= 800)
             {
                 wasSmallWindow = true;
-                ElementMessage.CallJSFunc(webView, "setSmallWindowSizes");
+                ElementMessage.CallJSFunc(webBrowser, "setSmallWindowSizes");
             }
             else if (Height > 800)
             {
                 wasSmallWindow = false;
-                ElementMessage.CallJSFunc(webView, "setNormalWindowSizes");
+                ElementMessage.CallJSFunc(webBrowser, "setNormalWindowSizes");
             }
         }
 
@@ -120,15 +171,16 @@ namespace LittleWarGameClient
 
         private void GameForm_LocationChanged(object sender, EventArgs e)
         {
-            var webViewBounds = new Rectangle(webView.PointToScreen(Point.Empty), webView.Size);
-            overlayForm.Location = webViewBounds.Location;
+            var webViewBounds = new Rectangle(webBrowser.PointToScreen(Point.Empty), webBrowser.Size);
+            OverlayForm.Instance.Location = webViewBounds.Location;
         }
 
         private void GameForm_Load(object sender, EventArgs e)
         {
-            overlayForm.Size = webView.Size;
-            var webViewBounds = new Rectangle(webView.PointToScreen(Point.Empty), webView.Size);
-            overlayForm.Location = webViewBounds.Location;
+            OverlayForm.Instance.Size = webBrowser.Size;
+            var webViewBounds = new Rectangle(webBrowser.PointToScreen(Point.Empty), webBrowser.Size);
+            OverlayForm.Instance.Location = webViewBounds.Location;
+            OverlayForm.Instance.AddOverlayMessage($"InitDone", new Notification("Overlay Initialized"));
         }
 
         private void webView_LoadingStateChanged(object sender, LoadingStateChangedEventArgs e)
@@ -145,102 +197,41 @@ namespace LittleWarGameClient
             else // has loaded
             {
                 var addonJS = System.IO.File.ReadAllText("js/addons.js");
-                webView.ExecuteScriptAsync(addonJS);
-                ElementMessage.CallJSFunc(webView, "init.function", $"\"{vHandler.CurrentVersion}\", {settings.GetMouseLock().ToString().ToLower()}, {settings.GetVolume()}");
+                webBrowser.ExecuteScriptAsync(addonJS);
+                ElementMessage.CallJSFunc(webBrowser, "init.function", $"\"{vHandler.CurrentVersion}\", {settings.GetMouseLock().ToString().ToLower()}, {settings.GetVolume()}");
                 kbHandler.InitHotkeyNames((ChromiumWebBrowser)sender, settings);
             }
         }
 
-        private void webView_JavascriptMessageReceived(object sender, JavascriptMessageReceivedEventArgs e)
+        internal void InvokeUI(Action a)
         {
-            ElementMessage? msg = JsonSerializer.Deserialize<ElementMessage>((string)e.Message);
-            if (msg != null)
-            {
-                switch (msg.Type)
-                {
-                    case ButtonType.FullScreen:
-                        InvokeUI(() =>
-                        {
-                            fullScreen.Toggle();
-                        });
-                        break;
-                    case ButtonType.Exit:
-                        Application.Exit();
-                        break;
-                    case ButtonType.MouseLock:
-                        if (msg.Value != null && bool.Parse(msg.Value) == true)
-                            mouseLocked = true;
-                        else
-                            mouseLocked = false;
-                        settings.SetMouseLock(mouseLocked);
-                        settings.SaveAsync();
-                        InvokeUI(() =>
-                        {
-                            CaptureCursor();
-                        });
-                        break;
-                    case ButtonType.InitComplete:
-                        gameHasLoaded = true;
-                        ForceResizeGameWindows();
-                        InvokeUI(() =>
-                        {
-                            loadingPanel.Visible = false;
-                            loadingTimer.Enabled = false;
-                            loadingText.Text = "Reconnecting";
-                        });
-                        break;
-                    case ButtonType.VolumeChanging:
-                        if (msg.Value != null)
-                        {
-                            var val = float.Parse(msg.Value);
-                            audioMngr.ChangeVolume(val);
-                        }
-                        break;
-                    case ButtonType.VolumeChanged:
-                        if (msg.Value != null)
-                        {
-                            var val = float.Parse(msg.Value);
-                            audioMngr.ChangeVolume(val);
-                            settings.SetVolume(val);
-                            settings.SaveAsync();
-                        }
-                        break;
-                }
-            }
-        }
-
-        internal static void InvokeUI(Action a)
-        {
-            if (thisForm != null)
-                thisForm.BeginInvoke(new MethodInvoker(a));
+            if (formInstance != null)
+                formInstance.BeginInvoke(new MethodInvoker(a));
         }
 
         private void GameForm_Deactivate(object sender, EventArgs e)
         {
-            if (!OverlayForm.IsActivated)
-                overlayForm.Visible = false;
+            if (!OverlayForm.Instance.IsActivated)
+                OverlayForm.Instance.Visible = false;
         }
 
         private void GameForm_Activated(object sender, EventArgs e)
         {
             CaptureCursor();
             ResizeGameWindows();
-            if (!overlayForm.IsDisposed)
-                overlayForm.Visible = true;
+            if (!OverlayForm.Instance.IsDisposed)
+                OverlayForm.Instance.Visible = true;
         }
 
         private void GameForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             audioMngr.DestroySession();
-            OverlayForm.InvokeUI(() =>
-            {
-                overlayForm.Close();
-            });
+            Application.Exit();
         }
 
         private void GameForm_Resize(object sender, EventArgs e)
         {
-            overlayForm.Size = webView.Size;
+            OverlayForm.Instance.Size = webBrowser.Size;
             CaptureCursor();
             ResizeGameWindows();
         }
@@ -249,6 +240,35 @@ namespace LittleWarGameClient
         {
             CaptureCursor();
             settings.SetWindowSize(Size);
+            settings.SaveAsync();
+        }
+
+        internal void MouseLock(bool choice)
+        {
+            mouseLocked = choice;
+            settings.SetMouseLock(mouseLocked);
+            settings.SaveAsync();
+            CaptureCursor();
+        }
+
+        internal void AddonsLoadedPostLogic()
+        {
+            gameHasLoaded = true;
+            ForceResizeGameWindows();
+            loadingPanel.Visible = false;
+            loadingTimer.Enabled = false;
+            loadingText.Text = "Reconnecting";
+        }
+
+        internal void ChangeVolume(float value)
+        {
+            audioMngr.ChangeVolume(value);
+        }
+
+        internal void VolumeChangePostLogic(float value)
+        {
+            audioMngr.ChangeVolume(value);
+            settings.SetVolume(value);
             settings.SaveAsync();
         }
     }
