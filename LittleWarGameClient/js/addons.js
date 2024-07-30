@@ -219,8 +219,6 @@ addons.init = {
             globalVolume.innerText = "Master Volume";
             var globalVolumeDiv = document.createElement("div");
             globalVolumeDiv.id = "optionsMasterSoundButton";
-            var globalVolumeAnchor = document.createElement("a");
-            globalVolumeDiv.appendChild(globalVolumeAnchor);
             globalVolume.appendChild(globalVolumeDiv);
             document.getElementById("optionsChecklistDiv").prepend(globalVolume);
             $(globalVolumeDiv).slider({ slide: (event, ui) => addons.changeVolume(globalVolumeDiv, ui.value / 100) });
