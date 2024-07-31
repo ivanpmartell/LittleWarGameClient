@@ -13,6 +13,7 @@ using nud2dlib;
 using CefSharp;
 using CefSharp.Handler;
 using CefSharp.WinForms;
+using CefSharp.DevTools.Debugger;
 
 namespace LittleWarGameClient
 {
@@ -42,6 +43,7 @@ namespace LittleWarGameClient
 
         internal GameForm()
         {
+            PreInitWeb();
             InitializeComponent();
             settings = new Settings();
             audioMngr = new AudioManager(Text);
@@ -51,9 +53,8 @@ namespace LittleWarGameClient
             InitWebView();
         }
 
-        private void InitWebView()
+        private void PreInitWeb()
         {
-            webBrowser.JavascriptMessageReceived += ElementMessage.JSMessageReceived;
             var path = Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath);
             var cefSettings = new CefSettings();
             cefSettings.CefCommandLineArgs.Add("no-proxy-server", "1");
@@ -61,6 +62,11 @@ namespace LittleWarGameClient
             cefSettings.CefCommandLineArgs.Add("disable-extensions", "1");
             cefSettings.RootCachePath = Path.Join(path, "data");
             Cef.Initialize(cefSettings);
+        }
+
+        private void InitWebView()
+        {
+            webBrowser.JavascriptMessageReceived += ElementMessage.JSMessageReceived;
             webBrowser.KeyboardHandler = kbHandler;
             webBrowser.RequestHandler = new RequestInterceptor();
             webBrowser.DownloadHandler = new DownloadInterceptor();
@@ -205,8 +211,15 @@ namespace LittleWarGameClient
 
         internal void InvokeUI(Action a)
         {
-            if (formInstance != null)
-                formInstance.BeginInvoke(new MethodInvoker(a));
+            if (formInstance != null && formInstance.InvokeRequired)
+            {
+                if (formInstance.IsHandleCreated)
+                    formInstance.BeginInvoke(new MethodInvoker(a));
+            }
+            else
+            {
+                a.Invoke();
+            }
         }
 
         private void GameForm_Deactivate(object sender, EventArgs e)
@@ -221,12 +234,22 @@ namespace LittleWarGameClient
             ResizeGameWindows();
             if (!OverlayForm.Instance.IsDisposed)
                 OverlayForm.Instance.Visible = true;
+            SendKeys.Send("%{F16}"); //Alt-Tab fix for game
         }
 
         private void GameForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            audioMngr.DestroySession();
-            Application.Exit();
+            switch (e.CloseReason)
+            {
+                case CloseReason.None:
+                    e.Cancel = true;
+                    break;
+                case CloseReason.UserClosing:
+                    audioMngr.DestroySession();
+                    webBrowser.Dispose();
+                    Application.Exit();
+                    break;
+            }
         }
 
         private void GameForm_Resize(object sender, EventArgs e)

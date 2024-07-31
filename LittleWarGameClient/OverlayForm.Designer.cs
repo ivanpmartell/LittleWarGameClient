@@ -46,7 +46,6 @@
             ClientSize = new Size(1445, 681);
             DoubleBuffered = true;
             EscapeKeyToClose = false;
-            Font = new Font(Program.LWG_FONT, 21.75F, FontStyle.Regular, GraphicsUnit.Point);
             ForeColor = Color.White;
             FormBorderStyle = FormBorderStyle.None;
             Location = new Point(0, 0);
@@ -58,6 +57,7 @@
             Text = "OverlayForm";
             TopMost = true;
             TransparencyKey = Color.Black;
+            FormClosing += OverlayForm_FormClosing;
             Load += OverlayForm_Load;
             ResumeLayout(false);
         }

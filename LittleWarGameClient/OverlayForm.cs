@@ -30,6 +30,7 @@ namespace LittleWarGameClient
             }
         }
 
+        private bool IsGameFormLoaded = false;
         private BDictionary<string, Notification> overlayMessages;
         internal void AddOverlayMessage(string name, Notification notification)
         {
@@ -43,6 +44,9 @@ namespace LittleWarGameClient
             overlayMessages = new BDictionary<string, Notification>();
             IsActivated = false;
             InitializeComponent();
+            if (Program.LWG_FONT != null)
+                Font = new Font(Program.LWG_FONT, 21.75F, FontStyle.Regular, GraphicsUnit.Point);
+
             try
             {
                 SteamClient.Init(480);
@@ -58,7 +62,7 @@ namespace LittleWarGameClient
             for (int i = 0; i < overlayMessages.Count; i++)
             {
                 var notification = overlayMessages[i].Value.message;
-                g.DrawText($" >{notification}", D2DColor.Yellow, Font, 0, (i+1)*30);
+                g.DrawText($" >{notification}", D2DColor.Yellow, Font, 0, (i + 1) * 30);
             }
         }
 
@@ -77,19 +81,18 @@ namespace LittleWarGameClient
             {
                 InvokeUI(() =>
                 {
-                    TransparencyKey = Color.Fuchsia;
                     IsActivated = true;
-                    KeyPreview = true;
-                    Activate();
+                    GameForm.Instance.Visible = false;
+                    TransparencyKey = Color.Fuchsia;
                 });
             }
             else
             {
                 InvokeUI(() =>
                 {
-                    TransparencyKey = Color.Black;
                     IsActivated = false;
-                    KeyPreview = false;
+                    GameForm.Instance.Visible = true;
+                    TransparencyKey = Color.Black;
                 });
             }
         }
@@ -114,7 +117,21 @@ namespace LittleWarGameClient
 
         private void OverlayForm_Load(object sender, EventArgs e)
         {
-            GameForm.Instance.ShowDialog();
+            if (!IsGameFormLoaded)
+            {
+                IsGameFormLoaded = true;
+                GameForm.Instance.Show();
+            }
+        }
+
+        private void OverlayForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            switch (e.CloseReason)
+            {
+                case CloseReason.None:
+                    e.Cancel = true;
+                    break;
+            }
         }
     }
 }

@@ -80,10 +80,9 @@ namespace LittleWarGameClient
 
         public bool OnPreKeyEvent(IWebBrowser webView, IBrowser browser, KeyType type, int windowsKeyCode, int nativeKeyCode, CefEventFlags modifiers, bool isSystemKey, ref bool isKeyboardShortcut)
         {
-        if (OverlayForm.Instance.IsActivated)
-            {
+            if (OverlayForm.Instance.IsActivated)
                 return true;
-            }
+
             var key = (Keys)windowsKeyCode;
             if (type == KeyType.RawKeyDown)
             {
