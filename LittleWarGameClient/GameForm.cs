@@ -68,6 +68,7 @@ namespace LittleWarGameClient
         {
             webBrowser.JavascriptMessageReceived += ElementMessage.JSMessageReceived;
             webBrowser.KeyboardHandler = kbHandler;
+            webBrowser.MenuHandler = new ContextMenuInterceptor();
             webBrowser.RequestHandler = new RequestInterceptor();
             webBrowser.DownloadHandler = new DownloadInterceptor();
             webBrowser.LoadUrl(baseUrl);
@@ -86,7 +87,7 @@ namespace LittleWarGameClient
                 LeaveFullscreen();
         }
 
-        internal void ToggleFullscreen()
+        internal async void ToggleFullscreen()
         {
             bool state;
             if (WindowState == FormWindowState.Maximized && FormBorderStyle == FormBorderStyle.None)
@@ -100,7 +101,7 @@ namespace LittleWarGameClient
                 EnterFullscreen();
             }
             settings.SetFullScreen(state);
-            settings.SaveAsync();
+            await settings.SaveAsync();
         }
 
         private void EnterFullscreen()
@@ -259,19 +260,20 @@ namespace LittleWarGameClient
             ResizeGameWindows();
         }
 
-        private void GameForm_ResizeEnd(object sender, EventArgs e)
+        private async void GameForm_ResizeEnd(object sender, EventArgs e)
         {
             CaptureCursor();
             settings.SetWindowSize(Size);
-            settings.SaveAsync();
+            await settings.SaveAsync();
         }
 
-        internal void MouseLock(bool choice)
+        internal async void MouseLock(bool choice)
         {
             mouseLocked = choice;
-            settings.SetMouseLock(mouseLocked);
-            settings.SaveAsync();
             CaptureCursor();
+            settings.SetMouseLock(mouseLocked);
+            await settings.SaveAsync();
+            
         }
 
         internal void AddonsLoadedPostLogic()
@@ -288,11 +290,11 @@ namespace LittleWarGameClient
             audioMngr.ChangeVolume(value);
         }
 
-        internal void VolumeChangePostLogic(float value)
+        internal async void VolumeChangePostLogic(float value)
         {
             audioMngr.ChangeVolume(value);
             settings.SetVolume(value);
-            settings.SaveAsync();
+            await settings.SaveAsync();
         }
     }
 }

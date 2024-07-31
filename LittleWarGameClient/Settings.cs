@@ -35,7 +35,7 @@ namespace LittleWarGameClient
             Init();
         }
 
-        private void Init()
+        private async void Init()
         {
             SetMouseLock(GetMouseLock());
             SetFullScreen(GetFullScreen());
@@ -47,7 +47,7 @@ namespace LittleWarGameClient
             SetChatHistoryMenuHotkey(GetChatHistoryMenuHotkey());
             SetFullscreenHotkey(GetFullscreenHotkey());
             SetVolume(GetVolume());
-            SaveAsync();
+            await SaveAsync();
         }
 
         private Ini CreateDefaultIniFile()
@@ -89,11 +89,19 @@ namespace LittleWarGameClient
             settings.SaveTo(fileName);
         }
 
-        internal async void SaveAsync()
+        internal async Task SaveAsync()
         {
-            using (FileStream stream = new FileStream(fileName, FileMode.Create, FileAccess.Write, FileShare.None, 4096, true))
+            try
             {
-                await settings.SaveToAsync(stream);
+                using (FileStream stream = new FileStream(fileName, FileMode.Create, FileAccess.Write, FileShare.None, 4096, true))
+                {
+                    await settings.SaveToAsync(stream);
+                }
+            }
+            catch
+            {
+                Thread.Sleep(50);
+                await SaveAsync();
             }
         }
 
