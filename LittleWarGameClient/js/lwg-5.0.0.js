@@ -31466,6 +31466,7 @@
           optionsSoundButton.id = 'optionsSoundButton';
           $('#soundVolumeLabel').append(optionsSoundButton);
           $('#optionsSoundButton').slider({ slide: (event, ui) => soundManager.volume.set(ui.value / 100) });
+          $('#optionsSoundButton').slider({ change: (event, ui) => soundManager.volume.set(ui.value / 100) });
           $('#optionsSoundButton').slider('value', soundManager.volume.get() * 100);
 
           // music volume label
@@ -31479,6 +31480,7 @@
           optionsMusicButton.id = 'optionsMusicButton';
           $('#musicVolumeLabel').append(optionsMusicButton);
           $('#optionsMusicButton').slider({ slide: (event, ui) => musicManager.volume.set(ui.value / 100) });
+          $('#optionsMusicButton').slider({ change: (event, ui) => musicManager.volume.set(ui.value / 100) });
           $('#optionsMusicButton').slider('value', musicManager.volume.get() * 100);
 
           // LCG volume label
@@ -31493,6 +31495,7 @@
           lcgVolumeSlider.id = 'lcgVolumeSlider';
           $('#lcgVolumeLabel').append(lcgVolumeSlider);
           $('#lcgVolumeSlider').slider({ slide: (event, ui) => lcgVolume.set(ui.value / 100) });
+          $('#lcgVolumeSlider').slider({ change: (event, ui) => lcgVolume.set(ui.value / 100) });
           Initialization.onDocumentReady(() => $('#lcgVolumeSlider').slider('value', lcgVolume.get() * 100));
 
           // scroll speed label
@@ -31506,6 +31509,7 @@
           scrollSpeedButton.id = 'scrollSpeedButton';
           $('#scrollSpeedLabel').append(scrollSpeedButton);
           $('#scrollSpeedButton').slider({ slide: (event, ui) => interface_.scrollSpeed.set(ui.value * 50) });
+          $('#scrollSpeedButton').slider({ change: (event, ui) => interface_.scrollSpeed.set(ui.value * 50) });
           Initialization.onDocumentReady(() => $('#scrollSpeedButton').slider('value', interface_.scrollSpeed.get() / 50));
 
           // Setting for when messages can pop up

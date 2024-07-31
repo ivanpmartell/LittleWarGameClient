@@ -55,7 +55,7 @@ namespace LittleWarGameClient
             }
         }
 
-        internal virtual void CheckForUpdate(object? sender, EventArgs e)
+        internal async virtual void CheckForUpdate(object? sender, EventArgs e)
         {
             if (LatestVersion != null && RequiresUpdate())
                 if (DialogResult.OK == MessageBox.Show("An update is available. Press OK to download it and exit the game", "Update", MessageBoxButtons.OKCancel))
@@ -69,7 +69,7 @@ namespace LittleWarGameClient
                     GameForm.Instance.Close();
                 }
             settings.SetLastUpdateChecked(DateTime.Now.Date);
-            settings.SaveAsync();
+            await settings.SaveAsync();
         }
 
         private bool RequiresUpdate()

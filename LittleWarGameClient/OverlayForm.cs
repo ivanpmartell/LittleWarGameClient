@@ -133,5 +133,12 @@ namespace LittleWarGameClient
                     break;
             }
         }
+
+        private void OverlayForm_Shown(object sender, EventArgs e)
+        {
+            TopMost = true;
+            textTimer.Enabled = true;
+            AddOverlayMessage($"InitDone", new Notification("Overlay Initialized"));
+        }
     }
 }

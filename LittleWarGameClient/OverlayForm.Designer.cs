@@ -34,7 +34,7 @@
             // 
             // textTimer
             // 
-            textTimer.Enabled = true;
+            textTimer.Enabled = false;
             textTimer.Interval = 1000;
             textTimer.Tick += textTimer_Tick;
             // 
@@ -55,10 +55,10 @@
             ShowIcon = false;
             ShowInTaskbar = false;
             Text = "OverlayForm";
-            TopMost = true;
             TransparencyKey = Color.Black;
             FormClosing += OverlayForm_FormClosing;
             Load += OverlayForm_Load;
+            Shown += OverlayForm_Shown;
             ResumeLayout(false);
         }
 

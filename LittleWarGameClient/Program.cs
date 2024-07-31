@@ -59,9 +59,13 @@ namespace LittleWarGameClient
                     {
                         if (process.Id != current.Id)
                         {
-                            var clientMainWindow = GetWindows(process.Handle).Where(window => window.WinTitle == "Littlewargame").First();
-                            SetForegroundWindow(clientMainWindow.MainWindowHandle);
-                            break;
+                            var clientWindows = GetWindows(process.Handle).Where(window => window.WinTitle == "Littlewargame");
+                            if (clientWindows.Count() > 0)
+                            {
+                                var clientMainWindow = clientWindows.First();
+                                SetForegroundWindow(clientMainWindow.MainWindowHandle);
+                                break;
+                            }
                         }
                     }
                 }

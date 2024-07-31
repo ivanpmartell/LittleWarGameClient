@@ -76,11 +76,10 @@ namespace LittleWarGameClient
             loadingText.Anchor = AnchorStyles.None;
             loadingText.BackColor = Color.Black;
             loadingText.BorderStyle = BorderStyle.None;
-            loadingText.Font = new Font(Program.LWG_FONT, 48F, FontStyle.Regular, GraphicsUnit.Point);
             loadingText.ForeColor = Color.White;
             loadingText.Location = new Point(390, 474);
             loadingText.Name = "loadingText";
-            loadingText.Size = new Size(480, 64);
+            loadingText.Size = new Size(480, 16);
             loadingText.TabIndex = 3;
             loadingText.Text = "Loading";
             loadingText.TextAlign = HorizontalAlignment.Center;
@@ -101,7 +100,7 @@ namespace LittleWarGameClient
             // 
             // loadingTimer
             // 
-            loadingTimer.Enabled = true;
+            loadingTimer.Enabled = false;
             loadingTimer.Interval = 1000;
             loadingTimer.Tick += loadingTimer_Tick;
             // 

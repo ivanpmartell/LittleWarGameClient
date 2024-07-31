@@ -45,6 +45,8 @@ namespace LittleWarGameClient
         {
             PreInitWeb();
             InitializeComponent();
+            if (Program.LWG_FONT != null)
+                loadingText.Font = new Font(Program.LWG_FONT, 48F, FontStyle.Regular, GraphicsUnit.Point);
             settings = new Settings();
             audioMngr = new AudioManager(Text);
             kbHandler = new KeyboardHandler(settings);
@@ -187,7 +189,6 @@ namespace LittleWarGameClient
             OverlayForm.Instance.Size = webBrowser.Size;
             var webViewBounds = new Rectangle(webBrowser.PointToScreen(Point.Empty), webBrowser.Size);
             OverlayForm.Instance.Location = webViewBounds.Location;
-            OverlayForm.Instance.AddOverlayMessage($"InitDone", new Notification("Overlay Initialized"));
         }
 
         private void webView_LoadingStateChanged(object sender, LoadingStateChangedEventArgs e)
@@ -233,9 +234,9 @@ namespace LittleWarGameClient
         {
             CaptureCursor();
             ResizeGameWindows();
+            SendKeys.Send("%{F16}"); //Alt-Tab fix for game
             if (!OverlayForm.Instance.IsDisposed)
                 OverlayForm.Instance.Visible = true;
-            SendKeys.Send("%{F16}"); //Alt-Tab fix for game
         }
 
         private void GameForm_FormClosing(object sender, FormClosingEventArgs e)
@@ -273,7 +274,7 @@ namespace LittleWarGameClient
             CaptureCursor();
             settings.SetMouseLock(mouseLocked);
             await settings.SaveAsync();
-            
+
         }
 
         internal void AddonsLoadedPostLogic()
