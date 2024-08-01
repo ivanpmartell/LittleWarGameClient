@@ -61,8 +61,12 @@ namespace LittleWarGameClient
         {
             for (int i = 0; i < overlayMessages.Count; i++)
             {
-                var notification = overlayMessages[i].Value.message;
-                g.DrawText($" >{notification}", D2DColor.Yellow, Font, 0, (i + 1) * 30);
+                try
+                {
+                    var notification = overlayMessages[i].Value.message;
+                    g.DrawText($" >{notification}", D2DColor.Yellow, Font, 0, (i + 1) * 30);
+                }
+                catch { break; }
             }
         }
 
