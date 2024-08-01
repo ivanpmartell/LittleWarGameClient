@@ -86,8 +86,8 @@ namespace LittleWarGameClient
                 InvokeUI(() =>
                 {
                     IsActivated = true;
-                    GameForm.Instance.Visible = false;
                     TransparencyKey = Color.Fuchsia;
+                    GameForm.Instance.ActiveControl = null;
                 });
             }
             else
@@ -95,8 +95,8 @@ namespace LittleWarGameClient
                 InvokeUI(() =>
                 {
                     IsActivated = false;
-                    GameForm.Instance.Visible = true;
                     TransparencyKey = Color.Black;
+                    GameForm.Instance.ActiveControl = GameForm.Instance.webBrowser;
                 });
             }
         }

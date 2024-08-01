@@ -100,7 +100,6 @@ namespace LittleWarGameClient
             // 
             // loadingTimer
             // 
-            loadingTimer.Enabled = false;
             loadingTimer.Interval = 1000;
             loadingTimer.Tick += loadingTimer_Tick;
             // 
@@ -149,6 +148,6 @@ namespace LittleWarGameClient
         private PictureBox mainImage;
         private TextBox loadingText;
         private System.Windows.Forms.Timer loadingTimer;
-        private CefSharp.WinForms.ChromiumWebBrowser webBrowser;
+        internal CefSharp.WinForms.ChromiumWebBrowser webBrowser;
     }
 }

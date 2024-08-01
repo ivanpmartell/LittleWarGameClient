@@ -34,7 +34,6 @@
             // 
             // textTimer
             // 
-            textTimer.Enabled = false;
             textTimer.Interval = 1000;
             textTimer.Tick += textTimer_Tick;
             // 
