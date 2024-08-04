@@ -24025,7 +24025,7 @@
         Game.prototype.refreshVision = function (playerNr) {
           if (playerNr != this.visionSetting) {
             this.visionSetting = playerNr;
-            PLAYING_PLAYER.team = playerNr > 0 ? this.players[playerNr].team : PLAYING_PLAYER.team = this.teams[0];
+            PLAYING_PLAYER.team = playerNr > 0 ? this.players[playerNr].team : this.teams[0];
             worker.postMessage({
               what: 'requestFogMask',
               teamIndex: this.players[playerNr].team.number,
@@ -24973,9 +24973,8 @@
           // Scrolling
           if (this.followVision && this.visionSetting > 0) {
             const player = this.players[this.visionSetting];
-            const targetX = player.cameraX + player.cameraWidth / 2 - WIDTH / 2;
-            const targetY = player.cameraY + player.cameraHeight / 2 - HEIGHT / 2;
-            FIELD_SIZE = player.fieldSize;
+            const targetX = ((player.cameraX + player.cameraWidth / 2) * FIELD_SIZE / player.fieldSize) - WIDTH /2;
+            const targetY = ((player.cameraY + player.cameraHeight / 2) * FIELD_SIZE / player.fieldSize) - HEIGHT / 2;
             this.setCameraX(targetX);
             this.setCameraY(targetY);
           } else if (!game_paused || PLAYING_PLAYER.controller == CONTROLLER.SPECTATOR) {
