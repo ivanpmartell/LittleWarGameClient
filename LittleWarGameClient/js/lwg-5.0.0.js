@@ -3859,9 +3859,12 @@
         const scaleFactorConfig = LocalConfig.registerValue('scale_factor', 3);
         var SCALE_FACTOR;
 
-        function setScaleFactor(value) {
-          value = Math.max(2, Math.min(10, value));
-          scaleFactorConfig.set(value);
+        function setScaleFactor(value, isSpectator = false) {
+          const minvalue = isSpectator ? 1 : 2;
+          value = Math.max(minvalue, Math.min(10, value));
+          if (!isSpectator) {
+            scaleFactorConfig.set(value);
+          }
           SCALE_FACTOR = value;
         }
         setScaleFactor(scaleFactorConfig.get());
@@ -22987,6 +22990,12 @@
             this.players[nr] = p;
           }
 
+          // Make sure zoom is a valid value
+          const oldScaleFactor = SCALE_FACTOR;
+          zoom(120);
+          if (SCALE_FACTOR > oldScaleFactor) {
+            zoom(-120);
+          }
           // reset ticksCounter (= Game timer)
           ticksCounter = 0;
 
@@ -24929,7 +24938,7 @@
             var middle_x = (game.cameraX + WIDTH / 2) / FIELD_SIZE;
             var middle_y = (game.cameraY + HEIGHT / 2) / FIELD_SIZE;
 
-            setScaleFactor(HEIGHT / maxViewSize);
+            setScaleFactor(HEIGHT / maxViewSize, PLAYING_PLAYER.controller == CONTROLLER.SPECTATOR);
             FIELD_SIZE = 16 * SCALE_FACTOR;
 
             this.setCameraX(middle_x * FIELD_SIZE - WIDTH / 2);
@@ -24941,7 +24950,7 @@
             var max_scale = HEIGHT / maxViewSize;
 
             if (SCALE_FACTOR < max_scale) {
-              setScaleFactor(max_scale);
+              setScaleFactor(max_scale, PLAYING_PLAYER.controller == CONTROLLER.SPECTATOR);
               FIELD_SIZE = 16 * SCALE_FACTOR;
             }
           }
@@ -25996,9 +26005,9 @@
           var middle_y = (game.cameraY + HEIGHT / 2) / FIELD_SIZE;
 
           if (direction > 0) {
-            setScaleFactor(SCALE_FACTOR + 1);
+            setScaleFactor(SCALE_FACTOR + 1, PLAYING_PLAYER.controller == CONTROLLER.SPECTATOR);
           } else {
-            setScaleFactor(SCALE_FACTOR - 1);
+            setScaleFactor(SCALE_FACTOR - 1, PLAYING_PLAYER.controller == CONTROLLER.SPECTATOR);
           }
 
           FIELD_SIZE = 16 * SCALE_FACTOR;
