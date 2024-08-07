@@ -186,9 +186,14 @@ namespace LittleWarGameClient
 
         private void GameForm_Load(object sender, EventArgs e)
         {
+            SplashScreen.Instance.InvokeUI(() =>
+            {
+                SplashScreen.Instance.Close();
+            });
             OverlayForm.Instance.Size = webBrowser.Size;
             var webViewBounds = new Rectangle(webBrowser.PointToScreen(Point.Empty), webBrowser.Size);
             OverlayForm.Instance.Location = webViewBounds.Location;
+            Activate();
         }
 
         private void webView_LoadingStateChanged(object sender, LoadingStateChangedEventArgs e)

@@ -16,9 +16,9 @@ namespace LittleWarGameClient
     {
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
-        static extern bool SetForegroundWindow(IntPtr hWnd);
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
         [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+        private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
 
         [DllImport("User32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -30,12 +30,23 @@ namespace LittleWarGameClient
         private static List<WinStruct> _WinStructList = new List<WinStruct>();
 
         internal static FontFamily? LWG_FONT;
+        internal static bool IsDoubleInstance = false;
         /// <summary>
         ///  The main entry point for the application.
         /// </summary>
         [STAThread]
         static void Main()
         {
+            (new Thread(() =>
+            {
+                string font_filename = "lwgFont.ttf";
+                if (!File.Exists(font_filename))
+                    File.WriteAllBytes(font_filename, Resources.LcdSolidFont);
+                PrivateFontCollection pfc = new();
+                pfc.AddFontFile(font_filename);
+                LWG_FONT = pfc.Families[0];
+                Application.Run(SplashScreen.Instance);
+            })).Start();
             bool createdNew = true;
             using (Mutex mutex = new Mutex(true, "Global\\LittleWarGameClient", out createdNew))
             {
@@ -44,16 +55,11 @@ namespace LittleWarGameClient
                     // To customize application configuration such as set high DPI settings or default font,
                     // see https://aka.ms/applicationconfiguration.
                     ApplicationConfiguration.Initialize();
-                    string font_filename = "lwgFont.ttf";
-                    if (!File.Exists(font_filename))
-                        File.WriteAllBytes(font_filename, Resources.LcdSolidFont);
-                    PrivateFontCollection pfc = new PrivateFontCollection();
-                    pfc.AddFontFile(font_filename);
-                    LWG_FONT = pfc.Families[0];
                     Application.Run(OverlayForm.Instance);
                 }
                 else
                 {
+                    IsDoubleInstance = true;
                     Process current = Process.GetCurrentProcess();
                     foreach (Process process in Process.GetProcessesByName(current.ProcessName))
                     {
