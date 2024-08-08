@@ -36,18 +36,20 @@ namespace LittleWarGameClient
         [STAThread]
         static void Main()
         {
-            // To customize application configuration such as set high DPI settings or default font,
-            // see https://aka.ms/applicationconfiguration.
-            ApplicationConfiguration.Initialize();
-            (new Thread(() =>
+            Thread _thread = new Thread(() =>
             {
                 SplashScreen.Instance.ShowDialog();
-            })).Start();
+            });
+            _thread.SetApartmentState(ApartmentState.STA);
+            _thread.Start();
             bool createdNew = true;
             using (Mutex mutex = new Mutex(true, "Global\\LittleWarGameClient", out createdNew))
             {
                 if (createdNew)
                 {
+                    // To customize application configuration such as set high DPI settings or default font,
+                    // see https://aka.ms/applicationconfiguration.
+                    ApplicationConfiguration.Initialize();
                     Application.Run(OverlayForm.Instance);
                 }
                 else
