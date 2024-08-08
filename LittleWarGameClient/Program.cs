@@ -29,7 +29,6 @@ namespace LittleWarGameClient
         private static CallBackPtr callBackPtr = Callback;
         private static List<WinStruct> _WinStructList = new List<WinStruct>();
 
-        internal static FontFamily? LWG_FONT;
         internal static bool IsDoubleInstance = false;
         /// <summary>
         ///  The main entry point for the application.
@@ -37,24 +36,18 @@ namespace LittleWarGameClient
         [STAThread]
         static void Main()
         {
+            // To customize application configuration such as set high DPI settings or default font,
+            // see https://aka.ms/applicationconfiguration.
+            ApplicationConfiguration.Initialize();
             (new Thread(() =>
             {
-                string font_filename = "lwgFont.ttf";
-                if (!File.Exists(font_filename))
-                    File.WriteAllBytes(font_filename, Resources.LcdSolidFont);
-                PrivateFontCollection pfc = new();
-                pfc.AddFontFile(font_filename);
-                LWG_FONT = pfc.Families[0];
-                Application.Run(SplashScreen.Instance);
+                SplashScreen.Instance.ShowDialog();
             })).Start();
             bool createdNew = true;
             using (Mutex mutex = new Mutex(true, "Global\\LittleWarGameClient", out createdNew))
             {
                 if (createdNew)
                 {
-                    // To customize application configuration such as set high DPI settings or default font,
-                    // see https://aka.ms/applicationconfiguration.
-                    ApplicationConfiguration.Initialize();
                     Application.Run(OverlayForm.Instance);
                 }
                 else

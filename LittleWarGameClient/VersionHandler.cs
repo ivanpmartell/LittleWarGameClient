@@ -30,9 +30,6 @@ namespace LittleWarGameClient
                 }
             }
         }
-
-        
-
         public event EventHandler LatestVersionObtained;
 
         public VersionHandler(Settings s)
@@ -44,14 +41,18 @@ namespace LittleWarGameClient
             CurrentVersion = new Version(0,0,0);
 #endif
             LatestVersionObtained += CheckForUpdate;
-            PerformCheck();
+            (new Thread(() =>
+            {
+                PerformCheck();
+            })).Start();
         }
 
         private async void PerformCheck()
         {
             if (CanCheckForUpdate())
             {
-                LatestVersion = await TryGetLatestVersionAsync();
+                OverlayForm.Instance.AddOverlayMessage("updateCheck", new Notification("Checking for updates..."));
+                LatestVersion = await GetLatestGitHubVersion();
             }
         }
 
@@ -89,39 +90,23 @@ namespace LittleWarGameClient
                 return false;
             return true;
         }
-
-        private async Task<Version?> TryGetLatestVersionAsync()
+        private async Task<Version?> GetLatestGitHubVersion(int retries=3)
         {
+            if (retries < 1)
+            {
+                OverlayForm.Instance.AddOverlayMessage("updateError", new Notification("Network Error: Could not check for newer versions"));
+                return null;
+            }
             try
             {
-                return await TimeoutAfter(GetLatestGitHubVersion(), TimeSpan.FromSeconds(10.0));
+                var client = new GitHubClient(new ProductHeaderValue("LWGClient"));
+                var release = await client.Repository.Release.GetLatest("ivanpmartell", "LittleWarGameClient");
+                return new Version(release.TagName.Substring(1));
             }
             catch (Exception)
             {
-                OverlayForm.Instance.AddOverlayMessage("updateCheck", new Notification("Network Error: Could not obtain check for updates"));
-                return null;
-            }
-        }
-        private async Task<Version> GetLatestGitHubVersion()
-        {
-            var client = new GitHubClient(new ProductHeaderValue("LWGClient"));
-            var release = await client.Repository.Release.GetLatest("ivanpmartell", "LittleWarGameClient");
-            return new Version(release.TagName.Substring(1));
-        }
-
-        private async Task<TResult> TimeoutAfter<TResult>(Task<TResult> task, TimeSpan timeout)
-        {
-            using var cts = new CancellationTokenSource();
-            var timeoutTask = Task<TResult>.Delay(timeout, cts.Token);
-            var completedTask = await Task<TResult>.WhenAny(task, timeoutTask).ConfigureAwait(false);
-            if (completedTask == task)
-            {
-                cts.Cancel();
-                return await task.ConfigureAwait(false);
-            }
-            else
-            {
-                throw new TimeoutException($"Task timed out after {timeout}");
+                Thread.Sleep(2000);
+                return await GetLatestGitHubVersion(retries-1);
             }
         }
     }

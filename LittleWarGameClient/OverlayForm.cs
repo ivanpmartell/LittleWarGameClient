@@ -44,8 +44,7 @@ namespace LittleWarGameClient
             overlayMessages = new BDictionary<string, Notification>();
             IsActivated = false;
             InitializeComponent();
-            if (Program.LWG_FONT != null)
-                Font = new Font(Program.LWG_FONT, 21.75F, FontStyle.Regular, GraphicsUnit.Point);
+            Font = new Font(FontManager.lwgFont, 21.75F, FontStyle.Regular, GraphicsUnit.Point);
 
             try
             {

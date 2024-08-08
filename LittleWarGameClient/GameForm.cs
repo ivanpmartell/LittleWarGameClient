@@ -45,8 +45,7 @@ namespace LittleWarGameClient
         {
             PreInitWeb();
             InitializeComponent();
-            if (Program.LWG_FONT != null)
-                loadingText.Font = new Font(Program.LWG_FONT, 48F, FontStyle.Regular, GraphicsUnit.Point);
+            loadingText.Font = new Font(FontManager.lwgFont, 48F, FontStyle.Regular, GraphicsUnit.Point);
             settings = new Settings();
             audioMngr = new AudioManager(Text);
             kbHandler = new KeyboardHandler(settings);

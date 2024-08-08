@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SplashScreen));
             panel1 = new Panel();
             pictureBox1 = new PictureBox();
             splashText = new TextBox();
@@ -75,6 +76,7 @@
             ClientSize = new Size(400, 150);
             Controls.Add(panel1);
             FormBorderStyle = FormBorderStyle.None;
+            Icon = (Icon)resources.GetObject("$this.Icon");
             MaximizeBox = false;
             Name = "SplashScreen";
             StartPosition = FormStartPosition.CenterScreen;

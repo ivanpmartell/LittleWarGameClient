@@ -26,11 +26,7 @@ namespace LittleWarGameClient
         public SplashScreen()
         {
             InitializeComponent();
-            if (Program.LWG_FONT != null)
-            {
-                splashText.Font = new Font(Program.LWG_FONT, 24F, FontStyle.Regular, GraphicsUnit.Point);
-                splashText.ForeColor = Color.White;
-            }
+            splashText.Font = new Font(FontManager.lwgFont, 24F, FontStyle.Regular, GraphicsUnit.Point);
         }
 
         internal void InvokeUI(Action a)
@@ -50,7 +46,7 @@ namespace LittleWarGameClient
         {
             if (Program.IsDoubleInstance)
             {
-                Application.Exit();
+                Close();
             }
         }
     }

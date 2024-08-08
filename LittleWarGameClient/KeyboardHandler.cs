@@ -106,7 +106,7 @@ namespace LittleWarGameClient
 
         public bool OnKeyEvent(IWebBrowser webView, IBrowser browser, KeyType type, int windowsKeyCode, int nativeKeyCode, CefEventFlags modifiers, bool isSystemKey)
         {
-            return true;
+            return false;
         }
     }
 }
