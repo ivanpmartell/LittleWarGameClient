@@ -30,6 +30,7 @@ namespace LittleWarGameClient
         private static List<WinStruct> _WinStructList = new List<WinStruct>();
 
         internal static bool IsDoubleInstance = false;
+
         /// <summary>
         ///  The main entry point for the application.
         /// </summary>

@@ -29,23 +29,10 @@
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SplashScreen));
-            panel1 = new Panel();
             pictureBox1 = new PictureBox();
             splashText = new TextBox();
-            panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             SuspendLayout();
-            // 
-            // panel1
-            // 
-            panel1.BackColor = Color.Black;
-            panel1.Controls.Add(pictureBox1);
-            panel1.Controls.Add(splashText);
-            panel1.Dock = DockStyle.Fill;
-            panel1.Location = new Point(0, 0);
-            panel1.Name = "panel1";
-            panel1.Size = new Size(400, 150);
-            panel1.TabIndex = 0;
             // 
             // pictureBox1
             // 
@@ -63,7 +50,7 @@
             splashText.BorderStyle = BorderStyle.None;
             splashText.Enabled = false;
             splashText.ForeColor = Color.White;
-            splashText.Location = new Point(118, 64);
+            splashText.Location = new Point(118, 62);
             splashText.Name = "splashText";
             splashText.Size = new Size(270, 16);
             splashText.TabIndex = 0;
@@ -73,8 +60,10 @@
             // SplashScreen
             // 
             AutoScaleMode = AutoScaleMode.None;
+            BackColor = Color.Black;
             ClientSize = new Size(400, 150);
-            Controls.Add(panel1);
+            Controls.Add(pictureBox1);
+            Controls.Add(splashText);
             FormBorderStyle = FormBorderStyle.None;
             Icon = (Icon)resources.GetObject("$this.Icon");
             MaximizeBox = false;
@@ -82,15 +71,12 @@
             StartPosition = FormStartPosition.CenterScreen;
             Text = "Littlewargame";
             Load += SplashScreen_Load;
-            panel1.ResumeLayout(false);
-            panel1.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).EndInit();
             ResumeLayout(false);
+            PerformLayout();
         }
 
         #endregion
-
-        private Panel panel1;
         private PictureBox pictureBox1;
         private TextBox splashText;
     }
