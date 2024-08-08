@@ -36,12 +36,13 @@ namespace LittleWarGameClient
         [STAThread]
         static void Main()
         {
-            Thread _thread = new Thread(() =>
+            Thread splashthread = new Thread(() =>
             {
                 SplashScreen.Instance.ShowDialog();
             });
-            _thread.SetApartmentState(ApartmentState.STA);
-            _thread.Start();
+            splashthread.IsBackground = true;
+            splashthread.SetApartmentState(ApartmentState.STA);
+            splashthread.Start();
             bool createdNew = true;
             using (Mutex mutex = new Mutex(true, "Global\\LittleWarGameClient", out createdNew))
             {
