@@ -1,4 +1,4 @@
-﻿var globalLWGDebug = false;
+var globalLWGDebug = false;
 (function () { function r(e, n, t) { function o(i, f) { if (!n[i]) { if (!e[i]) { var c = "function" == typeof require && require; if (!f && c) return c(i, !0); if (u) return u(i, !0); var a = new Error("Cannot find module '" + i + "'"); throw a.code = "MODULE_NOT_FOUND", a } var p = n[i] = { exports: {} }; e[i][0].call(p.exports, function (r) { var n = e[i][1][r]; return o(n || r) }, p, p.exports, r, e, n, t) } return n[i].exports } for (var u = "function" == typeof require && require, i = 0; i < t.length; i++)o(t[i]); return o } return r })()({
   1: [function (require, module, exports) {
     function assert(bool) {
@@ -1280,7 +1280,7 @@
 
           async function init() {
             try {
-              aiCommit = await httpGet('https://sockets.littlewargame.com:8084/ai_commit');
+              aiCommit = await httpGet('https://sockets.littlewargame.com:9004/ai_commit');
               await WorkerClient.call('set-ai-commit', { aiCommit: aiCommit });
 
               const manifest = await loadManifest(aiCommit);
@@ -1292,7 +1292,7 @@
               }));
             } catch (e) {
               console.log(`Failed to load AIs: ${e}`);
-              return;
+              // return;
             }
 
             // We got the manifest and commit
@@ -1481,7 +1481,7 @@
             return new HTMLBuilder()
               .add(`
                 <p class='hotkeyEntry' id='${textID}'>${this.name}
-                    <input type='text' id='${inputID}' class='hotkeyInput' style="width: 80px;" readonly></input>
+                    <input type='text' id='${inputID}' class='hotkeyInput' readonly></input>
                 </p>`)
               .addHook(() => this.text = $(`#${textID}`))
               .addHook(() => this.input = $(`#${inputID}`))
@@ -3889,7 +3889,7 @@
         // var SERVER_ADRESS = "ws://108.61.78.37:8083";
         // var SERVER_ADRESS = "wss://us1.littlewargame.com:8083";
         // var SERVER_ADRESS = "wss://us1-dev.littlewargame.com:8083";
-        // var SERVER_ADRESS = 'ws://localhost:8083';
+        // var SERVER_ADRESS = 'wss://localhost:8083';
 
         // The server and special event placeholders will be filled out by the gulp build
         var SERVER_ADRESS = 'wss://sockets.littlewargame.com:9000';
@@ -3909,7 +3909,7 @@
         var show_fps = false;
         var frameTimes = []; // to calculate fps from weighted average of last three frame times
         var mspfCap = 25; // "ms per frame cap" = inverse fps cap: 25ms per frame = 40 frames per second (1000/x), varies adaptively between 25 and 40 for more consistent performance under high load
-        var show_unit_details = true;
+        var show_unit_details = false;
         var fps = 0;
         var ticksCounter = 0;
         var percentageOfCurrentTickPassed = 0;
@@ -19026,11 +19026,12 @@
 
           c.globalAlpha = 1;
 
-          //debugs
-          if (globalLWGDebug && show_unit_details && !network_game) {
+          // debugs
+          if(globalLWGDebug && !network_game)
+          {
             c.fillStyle = "rgba(0, 0, 0, 1)";
             c.fillText(this.order.name, this.drawPos.px * FIELD_SIZE - game.cameraX - FIELD_SIZE / 3, (this.drawPos.py - this.type.healthbarOffset) * FIELD_SIZE - game.cameraY - 12);
-
+        
             // show detailed path to next target
             /*if(this.path)
             {
@@ -28994,66 +28995,11 @@
 
           this.menuMusic = [
             new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu.ogg'),
-            new Audio('music/menu2.ogg'),
           ];
+
+          this.menuMusicAlt = [
+            new Audio('music/menu2.ogg'),
+          ]
 
           this.ambient = [
             new Audio('sounds/ambient/ambient1.ogg'),
@@ -29071,7 +29017,7 @@
         };
 
         MusicManager.prototype.bindEvents = function () {
-          _.each([this.ingameMusic, this.defeatMusic, this.menuMusic], function (musics) {
+          _.each([this.ingameMusic, this.defeatMusic, this.menuMusic, this.menuMusicAlt], function (musics) {
             for (var i = 0; i < musics.length; i++) {
               musics[i].addEventListener('ended', function () {
                 setTimeout(function () {
@@ -29094,7 +29040,7 @@
         };
 
         MusicManager.prototype.setMusicVolume = function (volume) {
-          _.each([this.ingameMusic, this.defeatMusic, this.menuMusic, this.victoryMusic], function (musics) {
+          _.each([this.ingameMusic, this.defeatMusic, this.menuMusic, this.menuMusicAlt, this.victoryMusic], function (musics) {
             for (var i = 0; i < musics.length; i++) {
               musics[i].volume = 0.7 * volume;
             }
@@ -29119,7 +29065,11 @@
 
           var rand = Math.floor(Math.random() * 1000) % music.length;
           for (var i = 0; i < music.length; i++) {
-            var musicPiece = music[(rand + i) % music.length];
+            if (music == this.menuMusic) {
+              var musicPiece = Math.floor(Math.random() * 1000) % 50 == 1 ? this.menuMusicAlt[0] : music[(rand + i) % music.length];
+            } else {
+              var musicPiece = music[(rand + i) % music.length];
+            }
             if (musicPiece.readyState == 4) {
               musicPiece.currentTime = 0;
               const playAndRetry = () => {
