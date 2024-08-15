@@ -238,7 +238,9 @@ namespace LittleWarGameClient
         {
             CaptureCursor();
             ResizeGameWindows();
-            SendKeys.Send("%{F16}"); //Alt-Tab fix for game
+            if (kbHandler.hasHangingAltKey) //Alt-Tab fix for game
+                SendKeys.Send("%{F16}");
+
             if (!OverlayForm.Instance.IsDisposed)
                 OverlayForm.Instance.Visible = true;
         }

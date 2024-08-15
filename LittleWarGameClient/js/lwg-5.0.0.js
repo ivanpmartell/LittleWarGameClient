@@ -25902,7 +25902,9 @@ var globalLWGDebug = false;
                       }
                     }
                     for (const k of unitsToRemove) {
-                      keyManager.controlGroups[j].splice(k, 1);
+                      if (j != nr) {
+                        keyManager.controlGroups[j].splice(k, 1);
+                      }
                     }
                   }
                 }

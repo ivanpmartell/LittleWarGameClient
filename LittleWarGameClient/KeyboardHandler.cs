@@ -9,6 +9,7 @@ namespace LittleWarGameClient
     internal class KeyboardHandler : IKeyboardHandler
     {
         private readonly Dictionary<Keys, MethodInfo?> hotKeys = new Dictionary<Keys, MethodInfo?>();
+        internal bool hasHangingAltKey = false;
 
         internal KeyboardHandler(Settings settings)
         {
@@ -84,6 +85,11 @@ namespace LittleWarGameClient
                 return true;
 
             var key = (Keys)windowsKeyCode;
+            if (type == KeyType.KeyUp)
+            {
+                if (key == Keys.Menu) // Alt key
+                    hasHangingAltKey = false;
+            }
             if (type == KeyType.RawKeyDown)
             {
 #if DEBUG
@@ -93,6 +99,9 @@ namespace LittleWarGameClient
                     return true;
                 }
 #endif
+                if (key == Keys.Menu) // Alt key
+                    hasHangingAltKey = true;
+
                 if (hotKeys.ContainsKey(key))
                 {
                     var funcToCall = hotKeys[key];
@@ -106,6 +115,10 @@ namespace LittleWarGameClient
 
         public bool OnKeyEvent(IWebBrowser webView, IBrowser browser, KeyType type, int windowsKeyCode, int nativeKeyCode, CefEventFlags modifiers, bool isSystemKey)
         {
+            if (isSystemKey && type == KeyType.Char)
+                return true;
+            if (windowsKeyCode == 0x7F && modifiers == CefEventFlags.AltDown)
+                hasHangingAltKey = false;
             return false;
         }
     }
