@@ -130,11 +130,11 @@ namespace LittleWarGameClient
             Section section = EnsureSection(sectionName);
             try
             {
-                section[propertyName] = value;
+                section[propertyName] = value.ToString("0.##");
             }
             catch
             {
-                section.Add(new Property(propertyName, value));
+                section.Add(new Property(propertyName, value.ToString("0.##")));
             }
         }
 
