@@ -13,9 +13,9 @@ namespace LittleWarGameClient.Handlers
         private const int defaultUpdateInterval = 1;
         private const double defaultVolume = 1.0;
         private readonly DateTime defaultUpdateLastChecked = DateTime.MinValue;
-        private const Keys defaultOptionsMenu = Keys.F10;
-        private const Keys defaultFriendsMenu = Keys.F9;
-        private const Keys defaultChatHistoryMenu = Keys.F11;
+        private const Keys defaultOptionsMenuHotkey = Keys.F10;
+        private const Keys defaultFriendsMenuHotkey = Keys.F9;
+        private const Keys defaultChatHistoryMenuHotkey = Keys.F11;
         private const Keys defaultFullscreenHotkey = Keys.F8;
         private readonly Ini settings;
         private readonly SettingsHelper helper;
@@ -66,9 +66,9 @@ namespace LittleWarGameClient.Handlers
                 },
                 new Section("Hotkeys")
                 {
-                    new Property("optionsMenu", defaultOptionsMenu.ToString()),
-                    new Property("friendsMenu", defaultFriendsMenu.ToString()),
-                    new Property("chatHistoryMenu", defaultChatHistoryMenu.ToString()),
+                    new Property("optionsMenu", defaultOptionsMenuHotkey.ToString()),
+                    new Property("friendsMenu", defaultFriendsMenuHotkey.ToString()),
+                    new Property("chatHistoryMenu", defaultChatHistoryMenuHotkey.ToString()),
                     new Property("fullscreen", defaultFullscreenHotkey.ToString())
                 },
                 new Section("Audio")
@@ -161,7 +161,7 @@ namespace LittleWarGameClient.Handlers
         [Hotkey(FuncToCall = "OptionsMenuHotkeyFunc", JSFuncToCall = "addOptionsMenuHotkey")]
         public Keys GetOptionsMenuHotkey()
         {
-            return helper.GetVariable("Hotkeys", "optionsMenu", defaultOptionsMenu);
+            return helper.GetVariable("Hotkeys", "optionsMenu", defaultOptionsMenuHotkey);
         }
 
         internal void SetFriendsMenuHotkey(Keys value)
@@ -172,7 +172,7 @@ namespace LittleWarGameClient.Handlers
         [Hotkey(FuncToCall = "FriendsHotkeyFunc", JSFuncToCall = "addFriendsMenuHotkey")]
         public Keys GetFriendsMenuHotkey()
         {
-            return helper.GetVariable("Hotkeys", "friendsMenu", defaultFriendsMenu);
+            return helper.GetVariable("Hotkeys", "friendsMenu", defaultFriendsMenuHotkey);
         }
 
         internal void SetChatHistoryMenuHotkey(Keys value)
@@ -183,7 +183,7 @@ namespace LittleWarGameClient.Handlers
         [Hotkey(FuncToCall = "ChatHistoryHotkeyFunc", JSFuncToCall = "addChatHistoryHotkey")]
         public Keys GetChatHistoryMenuHotkey()
         {
-            return helper.GetVariable("Hotkeys", "chatHistoryMenu", defaultChatHistoryMenu);
+            return helper.GetVariable("Hotkeys", "chatHistoryMenu", defaultChatHistoryMenuHotkey);
         }
 
         internal void SetFullscreenHotkey(Keys value)

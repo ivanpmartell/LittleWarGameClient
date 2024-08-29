@@ -1,6 +1,5 @@
 ﻿using CefSharp;
 using CefSharp.WinForms;
-using System.Runtime.Serialization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -71,17 +70,11 @@ namespace LittleWarGameClient.Helpers
 
     internal enum ButtonType
     {
-        [EnumMember(Value = "FullScreen")]
         FullScreen,
-        [EnumMember(Value = "Exit")]
         Exit,
-        [EnumMember(Value = "MouseLock")]
         MouseLock,
-        [EnumMember(Value = "InitComplete")]
         InitComplete,
-        [EnumMember(Value = "VolumeChanging")]
         VolumeChanging,
-        [EnumMember(Value = "VolumeChanged")]
         VolumeChanged
     }
 }
