@@ -5,7 +5,7 @@ namespace LittleWarGameClient.Handlers
 {
     internal class SettingsHandler
     {
-        private const string fileName = "Settings.ini";
+        private readonly string fileName;
         private const int defaultWidth = 1280;
         private const int defaultHeight = 720;
         private const bool defaultFullscreen = false;
@@ -22,6 +22,10 @@ namespace LittleWarGameClient.Handlers
 
         public SettingsHandler()
         {
+            var settingsDirectory = "settings";
+            if (!Directory.Exists(settingsDirectory))
+                Directory.CreateDirectory(settingsDirectory);
+            fileName = Path.Join(settingsDirectory, $"{GameForm.InstanceName}.ini");
             if (!File.Exists(fileName))
                 settings = CreateDefaultIniFile();
             else
