@@ -22,8 +22,8 @@ namespace LittleWarGameClient
         internal const string baseUrl = @"https://littlewargame.com/play";
         private readonly SettingsHandler settings;
         private readonly KeyboardHandler kbHandler;
-        private readonly VersionHandler vHandler;
-        private readonly AudioHandler audioMngr;
+        private readonly VersionHandler versionHandler;
+        private readonly AudioHandler audioHandler;
         private FormWindowState PreviousWindowState;
 
         internal int requestCallCounter = 0;
@@ -38,9 +38,9 @@ namespace LittleWarGameClient
             InitializeComponent();
             loadingText.Font = new Font(FontHandler.lwgFont, 48F, FontStyle.Regular, GraphicsUnit.Point);
             settings = new SettingsHandler();
-            audioMngr = new AudioHandler(Text);
+            audioHandler = new AudioHandler(Text);
             kbHandler = new KeyboardHandler(settings);
-            vHandler = new VersionHandler(settings);
+            versionHandler = new VersionHandler(settings);
             InitScreen();
             InitWebView();
         }
@@ -224,7 +224,7 @@ namespace LittleWarGameClient
                     e.Cancel = true;
                     break;
                 case CloseReason.UserClosing:
-                    audioMngr.DestroySession();
+                    audioHandler.DestroySession();
                     webBrowser.Dispose();
                     Application.Exit();
                     break;
@@ -264,12 +264,12 @@ namespace LittleWarGameClient
 
         internal void ChangeVolume(float value)
         {
-            audioMngr.ChangeVolume(value);
+            audioHandler.ChangeVolume(value);
         }
 
         internal async void VolumeChangePostLogic(float value)
         {
-            audioMngr.ChangeVolume(value);
+            audioHandler.ChangeVolume(value);
             settings.SetVolume(value);
             await settings.SaveAsync();
         }
@@ -295,7 +295,7 @@ namespace LittleWarGameClient
                     requestCallWhereLoadingFinished = requestCallCounter;
                     var addonJS = System.IO.File.ReadAllText("js/addons.js");
                     webBrowser.ExecuteScriptAsync(addonJS);
-                    ElementMessage.CallJSFunc(webBrowser, "init.function", $"\"{vHandler.CurrentVersion}\", {settings.GetMouseLock().ToString().ToLower()}, {settings.GetVolume()}");
+                    ElementMessage.CallJSFunc(webBrowser, "init.function", $"\"{versionHandler.CurrentVersion}\", {settings.GetMouseLock().ToString().ToLower()}, {settings.GetVolume()}");
                     kbHandler.InitHotkeyNames((ChromiumWebBrowser)sender, settings);
                 }
             }

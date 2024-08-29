@@ -1,11 +1,5 @@
 ﻿using LittleWarGameClient.Properties;
-using System;
-using System.Collections.Generic;
 using System.Drawing.Text;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static nud2dlib.Windows.Forms.Win32;
 
 namespace LittleWarGameClient.Handlers
 {

@@ -1,15 +1,5 @@
-﻿using CefSharp;
-using Octokit;
-using System;
-using System.Collections.Generic;
+﻿using Octokit;
 using System.Diagnostics;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Net.Http;
-using System.Reflection;
-using System.Security.Policy;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace LittleWarGameClient.Handlers
 {
