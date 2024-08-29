@@ -4,7 +4,7 @@ using System.Runtime.Serialization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace LittleWarGameClient
+namespace LittleWarGameClient.Helpers
 {
     internal class ElementMessage
     {

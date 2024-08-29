@@ -1,4 +1,5 @@
 ﻿using IniFile;
+using LittleWarGameClient.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,9 +7,9 @@ using System.Reflection.Metadata;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LittleWarGameClient
+namespace LittleWarGameClient.Handlers
 {
-    internal class Settings
+    internal class SettingsHandler
     {
         private const string fileName = "Settings.ini";
         private const int defaultWidth = 1280;
@@ -25,7 +26,7 @@ namespace LittleWarGameClient
         private readonly Ini settings;
         private readonly SettingsHelper helper;
 
-        public Settings()
+        public SettingsHandler()
         {
             if (!File.Exists(fileName))
                 settings = CreateDefaultIniFile();

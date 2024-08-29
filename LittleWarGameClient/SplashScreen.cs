@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using LittleWarGameClient.Handlers;
 
 namespace LittleWarGameClient
 {
@@ -26,7 +27,7 @@ namespace LittleWarGameClient
         public SplashScreen()
         {
             InitializeComponent();
-            splashText.Font = new Font(FontManager.lwgFont, 24F, FontStyle.Regular, GraphicsUnit.Point);
+            splashText.Font = new Font(FontHandler.lwgFont, 24F, FontStyle.Regular, GraphicsUnit.Point);
         }
 
         internal void InvokeUI(Action a)

@@ -3,22 +3,23 @@ using System.Reflection.Metadata;
 using System.Reflection;
 using CefSharp.WinForms;
 using CefSharp;
+using LittleWarGameClient.Helpers;
 
-namespace LittleWarGameClient
+namespace LittleWarGameClient.Handlers
 {
     internal class KeyboardHandler : IKeyboardHandler
     {
         private readonly Dictionary<Keys, MethodInfo?> hotKeys = new Dictionary<Keys, MethodInfo?>();
         internal bool hasHangingAltKey = false;
 
-        internal KeyboardHandler(Settings settings)
+        internal KeyboardHandler(SettingsHandler settings)
         {
             InitHotkeys(settings);
         }
 
-        private void InitHotkeys(Settings settings)
+        private void InitHotkeys(SettingsHandler settings)
         {
-            Type type = typeof(Settings);
+            Type type = typeof(SettingsHandler);
             foreach (var methodInfo in type.GetMethods().Where(p => Attribute.IsDefined(p, typeof(Hotkey))))
             {
                 object[] attribute = methodInfo.GetCustomAttributes(typeof(Hotkey), true);
@@ -28,7 +29,7 @@ namespace LittleWarGameClient
                     Hotkey hotkey = (Hotkey)attribute[0];
                     if (hotkey.FuncToCall != null)
                     {
-                        Type thisType = this.GetType();
+                        Type thisType = GetType();
                         funcToCall = thisType.GetMethod(hotkey.FuncToCall, BindingFlags.NonPublic | BindingFlags.Instance);
                     }
                 }
@@ -38,9 +39,9 @@ namespace LittleWarGameClient
             }
         }
 
-        internal void InitHotkeyNames(ChromiumWebBrowser sender, Settings settings)
+        internal void InitHotkeyNames(ChromiumWebBrowser sender, SettingsHandler settings)
         {
-            Type type = typeof(Settings);
+            Type type = typeof(SettingsHandler);
             foreach (var methodInfo in type.GetMethods().Where(p => Attribute.IsDefined(p, typeof(Hotkey))))
             {
                 object[] attribute = methodInfo.GetCustomAttributes(typeof(Hotkey), true);
@@ -71,12 +72,12 @@ namespace LittleWarGameClient
 
         private void ChatHistoryHotkeyFunc(ChromiumWebBrowser sender)
         {
-            ElementMessage.CallJSFunc((ChromiumWebBrowser)sender, "toggleChat");
+            ElementMessage.CallJSFunc(sender, "toggleChat");
         }
 
         private void FriendsHotkeyFunc(ChromiumWebBrowser sender)
         {
-            ElementMessage.CallJSFunc((ChromiumWebBrowser)sender, "toggleFriends");
+            ElementMessage.CallJSFunc(sender, "toggleFriends");
         }
 
         public bool OnPreKeyEvent(IWebBrowser webView, IBrowser browser, KeyType type, int windowsKeyCode, int nativeKeyCode, CefEventFlags modifiers, bool isSystemKey, ref bool isKeyboardShortcut)
@@ -117,6 +118,7 @@ namespace LittleWarGameClient
         {
             if (isSystemKey && type == KeyType.Char)
                 return true;
+            //Matches Alt+F16 key press related to Alt-Tab fix for game
             if (windowsKeyCode == 0x7F && modifiers == CefEventFlags.AltDown)
                 hasHangingAltKey = false;
             return false;

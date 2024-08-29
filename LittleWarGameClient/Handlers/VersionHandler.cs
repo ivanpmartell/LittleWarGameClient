@@ -11,11 +11,11 @@ using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LittleWarGameClient
+namespace LittleWarGameClient.Handlers
 {
     internal class VersionHandler
     {
-        readonly Settings settings;
+        readonly SettingsHandler settings;
         internal Version CurrentVersion { get; private set; }
         private Version? latestVersion;
         internal Version? LatestVersion
@@ -32,19 +32,19 @@ namespace LittleWarGameClient
         }
         public event EventHandler LatestVersionObtained;
 
-        public VersionHandler(Settings s)
+        public VersionHandler(SettingsHandler s)
         {
             settings = s;
             var productVersion = System.Windows.Forms.Application.ProductVersion.Split('+').First();
             CurrentVersion = new Version(productVersion);
 #if DEBUG
-            CurrentVersion = new Version(0,0,0);
+            CurrentVersion = new Version(0, 0, 0);
 #endif
             LatestVersionObtained += CheckForUpdate;
-            (new Thread(() =>
+            new Thread(() =>
             {
                 PerformCheck();
-            })).Start();
+            }).Start();
         }
 
         private async void PerformCheck()
@@ -90,7 +90,7 @@ namespace LittleWarGameClient
                 return false;
             return true;
         }
-        private async Task<Version?> GetLatestGitHubVersion(int retries=3)
+        private async Task<Version?> GetLatestGitHubVersion(int retries = 3)
         {
             if (retries < 1)
             {
@@ -106,7 +106,7 @@ namespace LittleWarGameClient
             catch (Exception)
             {
                 Thread.Sleep(2000);
-                return await GetLatestGitHubVersion(retries-1);
+                return await GetLatestGitHubVersion(retries - 1);
             }
         }
     }

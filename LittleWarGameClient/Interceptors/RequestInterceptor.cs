@@ -1,12 +1,7 @@
 ﻿using CefSharp;
 using CefSharp.Handler;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace LittleWarGameClient
+namespace LittleWarGameClient.Interceptors
 {
     internal class RequestInterceptor : RequestHandler
     {
@@ -18,6 +13,12 @@ namespace LittleWarGameClient
             }
             //Default behaviour, url will be loaded normally.
             return null;
+        }
+
+        protected override bool OnBeforeBrowse(IWebBrowser chromiumWebBrowser, IBrowser browser, IFrame frame, IRequest request, bool userGesture, bool isRedirect)
+        {
+            GameForm.Instance.requestCallCounter++;
+            return base.OnBeforeBrowse(chromiumWebBrowser, browser, frame, request, userGesture, isRedirect);
         }
     }
 

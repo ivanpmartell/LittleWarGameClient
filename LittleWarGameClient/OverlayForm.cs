@@ -1,4 +1,5 @@
-﻿using Loyc.Collections;
+﻿using LittleWarGameClient.Handlers;
+using Loyc.Collections;
 using nud2dlib;
 using nud2dlib.Windows.Forms;
 using Steamworks;
@@ -44,7 +45,7 @@ namespace LittleWarGameClient
             overlayMessages = new BDictionary<string, Notification>();
             IsActivated = false;
             InitializeComponent();
-            Font = new Font(FontManager.lwgFont, 21.75F, FontStyle.Regular, GraphicsUnit.Point);
+            Font = new Font(FontHandler.lwgFont, 21.75F, FontStyle.Regular, GraphicsUnit.Point);
 
             try
             {
@@ -60,12 +61,12 @@ namespace LittleWarGameClient
         {
             for (int i = 0; i < overlayMessages.Count; i++)
             {
-                try
+                var overlayMessageValue = overlayMessages.TryGet(i);
+                if (overlayMessageValue.HasValue)
                 {
-                    var notification = overlayMessages[i].Value.message;
+                    var notification = overlayMessageValue.Value.Value.message;
                     g.DrawText($" >{notification}", D2DColor.Yellow, Font, 0, (i + 1) * 30);
                 }
-                catch { break; }
             }
         }
 

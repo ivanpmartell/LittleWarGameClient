@@ -1481,7 +1481,7 @@ var globalLWGDebug = false;
             return new HTMLBuilder()
               .add(`
                 <p class='hotkeyEntry' id='${textID}'>${this.name}
-                    <input type='text' id='${inputID}' class='hotkeyInput' readonly></input>
+                    <input type='text' id='${inputID}' class='hotkeyInput' style='width: 80px;' readonly></input>
                 </p>`)
               .addHook(() => this.text = $(`#${textID}`))
               .addHook(() => this.input = $(`#${inputID}`))

@@ -8,15 +8,15 @@ using System.Management;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LittleWarGameClient
+namespace LittleWarGameClient.Handlers
 {
-    internal class AudioManager : IAudioSessionEventsHandler
+    internal class AudioHandler : IAudioSessionEventsHandler
     {
         private MMDevice? mainDevice;
         private AudioSessionControl? currentSession;
         private readonly string formTitle;
 
-        public AudioManager(string formTitle)
+        public AudioHandler(string formTitle)
         {
             this.formTitle = formTitle;
             var etor = new MMDeviceEnumerator();
@@ -59,7 +59,7 @@ namespace LittleWarGameClient
             }
         }
 
-		private void ChangeTextAndIcon(AudioSessionControl session)
+        private void ChangeTextAndIcon(AudioSessionControl session)
         {
             if (session.IsSystemSoundsSession)
                 return;

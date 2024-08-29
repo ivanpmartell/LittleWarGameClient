@@ -7,9 +7,9 @@ using System.Text;
 using System.Threading.Tasks;
 using static nud2dlib.Windows.Forms.Win32;
 
-namespace LittleWarGameClient
+namespace LittleWarGameClient.Handlers
 {
-    internal class FontManager
+    internal class FontHandler
     {
         private static FontFamily? gameFont;
         internal static FontFamily lwgFont

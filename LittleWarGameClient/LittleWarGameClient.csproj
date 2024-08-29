@@ -8,7 +8,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <SignAssembly>False</SignAssembly>
     <DelaySign>True</DelaySign>
-    <ApplicationIcon>logo.ico</ApplicationIcon>
+    <ApplicationIcon>Assets\logo.ico</ApplicationIcon>
     <Platforms>x64;x86</Platforms>
   </PropertyGroup>
 
@@ -43,7 +43,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="logo.ico" />
+    <Content Include="Assets\logo.ico" />
 	<ContentWithTargetPath Include="steam\steam_api.dll" Condition=" '$(Platform)' == 'x86' ">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		<TargetPath>steam_api.dll</TargetPath>

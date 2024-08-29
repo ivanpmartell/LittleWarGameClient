@@ -5,9 +5,9 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LittleWarGameClient
+namespace LittleWarGameClient.Helpers
 {
-    public static class Extensions
+    public static class PanelHelper
     {
         public static void SetDoubleBuffered(this Panel panel)
         {

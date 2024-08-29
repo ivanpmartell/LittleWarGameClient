@@ -1,19 +1,8 @@
-using System.Runtime.CompilerServices;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Windows.Forms;
-using System.IO;
-using System.Reflection.Metadata;
-using System.Reflection;
-using System.Data;
-using System.Diagnostics;
-using NAudio.CoreAudioApi;
-using nud2dlib.Windows.Forms;
-using nud2dlib;
 using CefSharp;
-using CefSharp.Handler;
 using CefSharp.WinForms;
-using CefSharp.DevTools.Debugger;
+using LittleWarGameClient.Handlers;
+using LittleWarGameClient.Helpers;
+using LittleWarGameClient.Interceptors;
 
 namespace LittleWarGameClient
 {
@@ -31,12 +20,14 @@ namespace LittleWarGameClient
         }
 
         internal const string baseUrl = @"https://littlewargame.com/play";
-        private readonly Settings settings;
+        private readonly SettingsHandler settings;
         private readonly KeyboardHandler kbHandler;
         private readonly VersionHandler vHandler;
-        private readonly AudioManager audioMngr;
+        private readonly AudioHandler audioMngr;
         private FormWindowState PreviousWindowState;
 
+        internal int requestCallCounter = 0;
+        private int requestCallWhereLoadingFinished = -1;
         private bool wasSmallWindow = false;
         private bool gameHasLoaded = false;
         private bool mouseLocked;
@@ -45,9 +36,9 @@ namespace LittleWarGameClient
         {
             PreInitWeb();
             InitializeComponent();
-            loadingText.Font = new Font(FontManager.lwgFont, 48F, FontStyle.Regular, GraphicsUnit.Point);
-            settings = new Settings();
-            audioMngr = new AudioManager(Text);
+            loadingText.Font = new Font(FontHandler.lwgFont, 48F, FontStyle.Regular, GraphicsUnit.Point);
+            settings = new SettingsHandler();
+            audioMngr = new AudioHandler(Text);
             kbHandler = new KeyboardHandler(settings);
             vHandler = new VersionHandler(settings);
             InitScreen();
@@ -195,26 +186,6 @@ namespace LittleWarGameClient
             Activate();
         }
 
-        private void webView_LoadingStateChanged(object sender, LoadingStateChangedEventArgs e)
-        {
-            if (e.IsLoading)
-            {
-                InvokeUI(() =>
-                {
-                    loadingPanel.Visible = true;
-                    loadingTimer.Enabled = true;
-                    gameHasLoaded = false;
-                });
-            }
-            else // has loaded
-            {
-                var addonJS = System.IO.File.ReadAllText("js/addons.js");
-                webBrowser.ExecuteScriptAsync(addonJS);
-                ElementMessage.CallJSFunc(webBrowser, "init.function", $"\"{vHandler.CurrentVersion}\", {settings.GetMouseLock().ToString().ToLower()}, {settings.GetVolume()}");
-                kbHandler.InitHotkeyNames((ChromiumWebBrowser)sender, settings);
-            }
-        }
-
         internal void InvokeUI(Action a)
         {
             if (formInstance != null && formInstance.InvokeRequired)
@@ -289,7 +260,6 @@ namespace LittleWarGameClient
             ForceResizeGameWindows();
             loadingPanel.Visible = false;
             loadingTimer.Enabled = false;
-            loadingText.Text = "Reconnecting";
         }
 
         internal void ChangeVolume(float value)
@@ -302,6 +272,47 @@ namespace LittleWarGameClient
             audioMngr.ChangeVolume(value);
             settings.SetVolume(value);
             await settings.SaveAsync();
+        }
+
+        private void webView_LoadingStateChanged(object sender, LoadingStateChangedEventArgs e)
+        {
+            if (e.IsLoading)
+            {
+                InvokeUI(() =>
+                {
+                    loaderImage.Visible = true;
+                    loadingPanel.Visible = true;
+                    loadingText.Text = "Loading";
+                    loadingText.Enabled = true;
+                    loadingTimer.Enabled = true;
+                    gameHasLoaded = false;
+                });
+            }
+            else // has loaded
+            {
+                if (requestCallWhereLoadingFinished < requestCallCounter)
+                {
+                    requestCallWhereLoadingFinished = requestCallCounter;
+                    var addonJS = System.IO.File.ReadAllText("js/addons.js");
+                    webBrowser.ExecuteScriptAsync(addonJS);
+                    ElementMessage.CallJSFunc(webBrowser, "init.function", $"\"{vHandler.CurrentVersion}\", {settings.GetMouseLock().ToString().ToLower()}, {settings.GetVolume()}");
+                    kbHandler.InitHotkeyNames((ChromiumWebBrowser)sender, settings);
+                }
+            }
+        }
+
+        private void webView_LoadError(object sender, LoadErrorEventArgs e)
+        {
+            InvokeUI(() =>
+            {
+                loaderImage.Visible = false;
+                loadingText.Text = "ERROR";
+                loadingText.Enabled = false;
+                loadingText.Visible = true;
+                loadingTimer.Enabled = false;
+                gameHasLoaded = false;
+            });
+            OverlayForm.Instance.AddOverlayMessage("loadError", new Notification("Error: Website could not be loaded"));
         }
     }
 }

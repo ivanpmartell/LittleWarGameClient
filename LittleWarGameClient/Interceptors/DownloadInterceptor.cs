@@ -1,12 +1,7 @@
 ﻿using CefSharp;
 using CefSharp.Handler;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace LittleWarGameClient
+namespace LittleWarGameClient.Interceptors
 {
     internal class DownloadInterceptor : DownloadHandler
     {
@@ -14,7 +9,7 @@ namespace LittleWarGameClient
         {
             if (!callback.IsDisposed)
             {
-                var path = Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath);
+                var path = Path.GetDirectoryName(Application.ExecutablePath);
                 using (callback)
                 {
                     var downloadsDirPath = Path.Join(path, "downloads");
