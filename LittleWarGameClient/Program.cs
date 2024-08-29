@@ -29,6 +29,7 @@ namespace LittleWarGameClient
         [STAThread]
         static void Main()
         {
+            var args = ParseArguments(Environment.GetCommandLineArgs()[1..]);
             Thread splashthread = new Thread(() =>
             {
                 SplashScreen.Instance.ShowDialog();
@@ -37,12 +38,16 @@ namespace LittleWarGameClient
             splashthread.SetApartmentState(ApartmentState.STA);
             splashthread.Start();
             bool createdNew = true;
-            using (Mutex mutex = new Mutex(true, "Global\\LittleWarGameClient", out createdNew))
+            string? profileName;
+            if (!args.TryGetValue("profile", out profileName))
+                profileName = "main";
+            using (Mutex mutex = new Mutex(true, $"Global\\LittleWarGameClient_{profileName}", out createdNew))
             {
                 if (createdNew)
                 {
                     // To customize application configuration such as set high DPI settings or default font,
                     // see https://aka.ms/applicationconfiguration.
+                    GameForm.InstanceName = profileName;
                     ApplicationConfiguration.Initialize();
                     Application.Run(OverlayForm.Instance);
                 }
@@ -54,7 +59,7 @@ namespace LittleWarGameClient
                     {
                         if (process.Id != current.Id)
                         {
-                            var clientWindows = GetWindows(process.Handle).Where(window => window.WinTitle == "Littlewargame");
+                            var clientWindows = GetWindows(process.Handle).Where(window => window.WinTitle == $"Littlewargame({profileName})");
                             if (clientWindows.Count() > 0)
                             {
                                 var clientMainWindow = clientWindows.First();
@@ -65,6 +70,24 @@ namespace LittleWarGameClient
                     }
                 }
             }
+        }
+
+        private static Dictionary<string, string> ParseArguments(string[] args)
+        {
+            args = Array.ConvertAll(args, d => d.ToLower());
+            Dictionary<string, string> arguments = new Dictionary<string, string>();
+
+            for (int i = 0; i < args.Length; i += 2)
+            {
+                if (args.Length == i + 1 || args[i + 1].StartsWith("-"))
+                {
+                    arguments.Add(args[i][1..], string.Empty);
+                    i--;
+                }
+                if (args.Length >= i + 1 && !args[i + 1].StartsWith("-"))
+                    arguments.Add(args[i][1..], args[i + 1]);
+            }
+            return arguments;
         }
 
         private static bool Callback(IntPtr hWnd, int lparam)

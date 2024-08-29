@@ -18,6 +18,9 @@ namespace LittleWarGameClient
                 return formInstance;
             }
         }
+#pragma warning disable CS8618
+        internal static string InstanceName { get; set; }
+#pragma warning restore CS8618
 
         internal const string baseUrl = @"https://littlewargame.com/play";
         private readonly SettingsHandler settings;
@@ -34,8 +37,11 @@ namespace LittleWarGameClient
 
         internal GameForm()
         {
+            if (InstanceName == null)
+                throw new MissingFieldException(nameof(InstanceName));
             PreInitWeb();
             InitializeComponent();
+            Text = $"Littlewargame({InstanceName})";
             loadingText.Font = new Font(FontHandler.lwgFont, 48F, FontStyle.Regular, GraphicsUnit.Point);
             settings = new SettingsHandler();
             audioHandler = new AudioHandler(Text);
@@ -52,7 +58,7 @@ namespace LittleWarGameClient
             cefSettings.CefCommandLineArgs.Add("no-proxy-server", "1");
             cefSettings.CefCommandLineArgs.Add("disable-plugins-discovery", "1");
             cefSettings.CefCommandLineArgs.Add("disable-extensions", "1");
-            cefSettings.RootCachePath = Path.Join(path, "data");
+            cefSettings.RootCachePath = Path.Join(path, "data", InstanceName);
             Cef.Initialize(cefSettings);
         }
 

@@ -56,7 +56,7 @@ jobs:
       uses: mathieudutour/github-tag-action@v6.0
       with:
         github_token: ${{ secrets.TOKEN }}
-        default_bump: patch
+        default_bump: minor
 
     - name: Create a GitHub release
       uses: actions/create-release@v1

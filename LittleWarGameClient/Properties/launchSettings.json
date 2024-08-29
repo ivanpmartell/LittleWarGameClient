@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "LWGClient": {
+      "commandName": "Project"
+    },
+    "MultiProfile LWGClient": {
+      "commandName": "Project",
+      "commandLineArgs": "-profile test"
+    }
+  }
+}
