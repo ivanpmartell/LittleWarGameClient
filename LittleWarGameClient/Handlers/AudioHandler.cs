@@ -66,8 +66,10 @@ namespace LittleWarGameClient.Handlers
             var currentProc = Process.GetCurrentProcess();
             Process? parentProc = proc;
             bool isSubProc = false;
-            while (parentProc != null && parentProc.Id != 0)
+            int currentLoop = 0;
+            while (currentLoop < 50 && parentProc != null && parentProc.Id != 0)
             {
+                currentLoop++;
                 parentProc = GetParentProcess(parentProc);
                 if (parentProc != null && parentProc.Id == currentProc.Id)
                 {
