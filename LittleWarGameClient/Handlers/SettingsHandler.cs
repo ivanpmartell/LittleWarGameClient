@@ -92,10 +92,8 @@ namespace LittleWarGameClient.Handlers
         {
             try
             {
-                using (FileStream stream = new FileStream(fileName, FileMode.Create, FileAccess.Write, FileShare.None, 4096, true))
-                {
-                    await settings.SaveToAsync(stream);
-                }
+                using FileStream stream = new(fileName, FileMode.Create, FileAccess.Write, FileShare.None, 4096, true);
+                await settings.SaveToAsync(stream);
             }
             catch
             {
@@ -212,6 +210,7 @@ namespace LittleWarGameClient.Handlers
         }
     }
 
+    [AttributeUsage(AttributeTargets.Method)]
     internal class Hotkey : Attribute
     {
         public string? FuncToCall { get; set; }

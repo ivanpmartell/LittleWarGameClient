@@ -6,15 +6,15 @@ using Steamworks;
 
 namespace LittleWarGameClient
 {
-    internal struct Notification
+    internal readonly record struct Notification
     {
-        internal string message { get; }
-        internal DateTime postedTime { get; }
+        internal string Message { get; }
+        internal DateTime PostedTime { get; }
 
         internal Notification(string msg)
         {
-            this.message = msg;
-            this.postedTime = DateTime.Now;
+            Message = msg;
+            PostedTime = DateTime.Now;
         }
     }
 
@@ -32,10 +32,10 @@ namespace LittleWarGameClient
         }
 
         private bool IsGameFormLoaded = false;
-        private BDictionary<string, Notification> overlayMessages;
+        private readonly BDictionary<string, Notification> overlayMessages;
         internal void AddOverlayMessage(string name, Notification notification)
         {
-            overlayMessages[name] = new Notification(notification.message);
+            overlayMessages[name] = new Notification(notification.Message);
         }
 
         internal bool IsActivated { get; private set; }
@@ -64,7 +64,7 @@ namespace LittleWarGameClient
                 var overlayMessageValue = overlayMessages.TryGet(i);
                 if (overlayMessageValue.HasValue)
                 {
-                    var notification = overlayMessageValue.Value.Value.message;
+                    var notification = overlayMessageValue.Value.Value.Message;
                     g.DrawText($" >{notification}", D2DColor.Yellow, Font, 0, (i + 1) * 30);
                 }
             }
@@ -74,7 +74,7 @@ namespace LittleWarGameClient
         {
             for (int i = 0; i < overlayMessages.Count; i++)
             {
-                if (overlayMessages[i].Value.postedTime.AddSeconds(6) < DateTime.Now)
+                if (overlayMessages[i].Value.PostedTime.AddSeconds(6) < DateTime.Now)
                     overlayMessages.RemoveAt(i);
             }
         }

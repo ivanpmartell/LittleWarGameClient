@@ -7,7 +7,7 @@ namespace LittleWarGameClient.Handlers
 {
     internal class AudioHandler : IAudioSessionEventsHandler
     {
-        private MMDevice? mainDevice;
+        private readonly MMDevice? mainDevice;
         private AudioSessionControl? currentSession;
         private readonly string formTitle;
 
@@ -89,7 +89,7 @@ namespace LittleWarGameClient.Handlers
 
         private void AudioSessionManager_OnSessionCreated(object sender, IAudioSessionControl newSession)
         {
-            AudioSessionControl managedControl = new AudioSessionControl(newSession);
+            AudioSessionControl managedControl = new(newSession);
             ChangeTextAndIcon(managedControl);
         }
 
@@ -97,26 +97,21 @@ namespace LittleWarGameClient.Handlers
         {
             try
             {
-                using (var query = new ManagementObjectSearcher(
+                using var query = new ManagementObjectSearcher(
                   "SELECT * " +
                   "FROM Win32_Process " +
-                  "WHERE ProcessId=" + process.Id))
+                  "WHERE ProcessId=" + process.Id);
+                using var processes = query.Get();
+                var filteredProcesses = processes.OfType<ManagementObject>().FirstOrDefault();
+                if (filteredProcesses != null)
                 {
-                    using (var collection = query.Get())
+                    using (filteredProcesses)
                     {
-                        var mo = collection.OfType<ManagementObject>().FirstOrDefault();
-                        if (mo != null)
-                        {
-                            using (mo)
-                            {
-                                var p = Process.GetProcessById((int)(uint)mo["ParentProcessId"]);
-                                return p;
-                            }
-                        }
-
+                        var p = Process.GetProcessById((int)(uint)filteredProcesses["ParentProcessId"]);
+                        return p;
                     }
-                    return null;
                 }
+                return null;
             }
             catch
             {
