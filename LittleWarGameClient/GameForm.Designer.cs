@@ -113,6 +113,7 @@ namespace LittleWarGameClient
             webBrowser.Size = new Size(1264, 681);
             webBrowser.TabIndex = 3;
             webBrowser.LoadError += webView_LoadError;
+            webBrowser.FrameLoadStart += webBrowser_FrameLoadStart;
             webBrowser.LoadingStateChanged += webView_LoadingStateChanged;
             // 
             // GameForm

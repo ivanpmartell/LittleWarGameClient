@@ -282,19 +282,7 @@ namespace LittleWarGameClient
 
         private void webView_LoadingStateChanged(object sender, LoadingStateChangedEventArgs e)
         {
-            if (e.IsLoading)
-            {
-                InvokeUI(() =>
-                {
-                    loaderImage.Visible = true;
-                    loadingPanel.Visible = true;
-                    loadingText.Text = "Loading";
-                    loadingText.Enabled = true;
-                    loadingTimer.Enabled = true;
-                    gameHasLoaded = false;
-                });
-            }
-            else // has loaded
+            if (!e.IsLoading)
             {
                 if (requestCallWhereLoadingFinished < requestCallCounter)
                 {
@@ -319,6 +307,19 @@ namespace LittleWarGameClient
                 gameHasLoaded = false;
             });
             OverlayForm.Instance.AddOverlayMessage("loadError", new Notification("Error: Website could not be loaded"));
+        }
+
+        private void webBrowser_FrameLoadStart(object sender, FrameLoadStartEventArgs e)
+        {
+            InvokeUI(() =>
+            {
+                loaderImage.Visible = true;
+                loadingPanel.Visible = true;
+                loadingText.Text = "Loading";
+                loadingText.Enabled = true;
+                loadingTimer.Enabled = true;
+                gameHasLoaded = false;
+            });
         }
     }
 }
