@@ -55,7 +55,7 @@
 	<None Include="js\addons.js">
 	  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	</None>
-	<None Include="js\lwg-5.0.0.js">
+	<None Include="js\lwg.js">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	</None>
   </ItemGroup>

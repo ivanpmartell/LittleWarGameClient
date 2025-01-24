@@ -42,13 +42,13 @@ namespace LittleWarGameClient
             PreInitWeb();
             InitializeComponent();
             Text = $"Littlewargame({InstanceName})";
-            loadingText.Font = new Font(FontHandler.lwgFont, 48F, FontStyle.Regular, GraphicsUnit.Point);
+            loadingText.Font = FontHandler.gameFont(48F);
             settings = new SettingsHandler();
             audioHandler = new AudioHandler(Text);
             kbHandler = new KeyboardHandler(settings);
             versionHandler = new VersionHandler(settings);
             InitScreen();
-            InitWebView();
+            InitWebView(settings);
         }
 
         private void PreInitWeb()
@@ -62,13 +62,16 @@ namespace LittleWarGameClient
             Cef.Initialize(cefSettings);
         }
 
-        private void InitWebView()
+        private void InitWebView(SettingsHandler settings)
         {
             webBrowser.JavascriptMessageReceived += ElementMessage.JSMessageReceived;
             webBrowser.KeyboardHandler = kbHandler;
             webBrowser.MenuHandler = new ContextMenuInterceptor();
-            webBrowser.RequestHandler = new RequestInterceptor();
             webBrowser.DownloadHandler = new DownloadInterceptor();
+            if (settings.GetInjectJS())
+                webBrowser.RequestHandler = new RequestInterceptor();
+            else
+                webBrowser.RequestHandler = new DefaultRequestInterceptor();
             webBrowser.LoadUrl(baseUrl);
             loadingPanel.SetDoubleBuffered();
             loadingPanel.BringToFront();
@@ -83,6 +86,18 @@ namespace LittleWarGameClient
                 EnterFullscreen();
             else
                 LeaveFullscreen();
+        }
+
+        internal async void InjectJS(bool choice)
+        {
+            if (choice)
+                webBrowser.RequestHandler = new RequestInterceptor();
+            else
+                webBrowser.RequestHandler = new DefaultRequestInterceptor();
+            settings.SetInjectJS(choice);
+            await settings.SaveAsync();
+            if (DialogResult.OK == MessageBox.Show("Injecting additional gameplay functionality requires reloading the game. Reload now?", "Update", MessageBoxButtons.OKCancel))
+                webBrowser.Reload(true);
         }
 
         internal async void ToggleFullscreen()
@@ -257,7 +272,6 @@ namespace LittleWarGameClient
             CaptureCursor();
             settings.SetMouseLock(mouseLocked);
             await settings.SaveAsync();
-
         }
 
         internal void AddonsLoadedPostLogic()
@@ -289,7 +303,7 @@ namespace LittleWarGameClient
                     requestCallWhereLoadingFinished = requestCallCounter;
                     var addonJS = System.IO.File.ReadAllText("js/addons.js");
                     webBrowser.ExecuteScriptAsync(addonJS);
-                    ElementMessage.CallJSFunc(webBrowser, "init.function", $"\"{versionHandler.CurrentVersion}\", {settings.GetMouseLock().ToString().ToLower()}, {settings.GetVolume()}");
+                    ElementMessage.CallJSFunc(webBrowser, "init.function", $"\"{versionHandler.CurrentVersion}\", {settings.GetMouseLock().ToString().ToLower()}, {settings.GetVolume()}, {settings.GetInjectJS().ToString().ToLower()}");
                     kbHandler.InitHotkeyNames((ChromiumWebBrowser)sender, settings);
                 }
             }

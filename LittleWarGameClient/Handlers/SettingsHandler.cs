@@ -8,6 +8,7 @@ namespace LittleWarGameClient.Handlers
         private readonly string fileName;
         private const int defaultWidth = 1280;
         private const int defaultHeight = 720;
+        private const bool defaultInjectJS = false;
         private const bool defaultFullscreen = false;
         private const bool defaultMouseLock = false;
         private const int defaultUpdateInterval = 1;
@@ -46,6 +47,7 @@ namespace LittleWarGameClient.Handlers
             SetChatHistoryMenuHotkey(GetChatHistoryMenuHotkey());
             SetFullscreenHotkey(GetFullscreenHotkey());
             SetVolume(GetVolume());
+            SetInjectJS(GetInjectJS());
             await SaveAsync();
         }
 
@@ -207,6 +209,16 @@ namespace LittleWarGameClient.Handlers
         public double GetVolume()
         {
             return helper.GetVariable("Audio", "volume", defaultVolume);
+        }
+
+        internal void SetInjectJS(bool value)
+        {
+            helper.SetVariable("JS", "inject", value);
+        }
+
+        public bool GetInjectJS()
+        {
+            return helper.GetVariable("JS", "inject", defaultInjectJS);
         }
     }
 

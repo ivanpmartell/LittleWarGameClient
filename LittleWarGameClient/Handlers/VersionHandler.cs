@@ -48,17 +48,28 @@ namespace LittleWarGameClient.Handlers
 
         internal async virtual void CheckForUpdate(object? sender, EventArgs e)
         {
-            if (LatestVersion != null && RequiresUpdate())
-                if (DialogResult.OK == MessageBox.Show("An update is available. Press OK to download it and exit the game", "Update", MessageBoxButtons.OKCancel))
+            if (LatestVersion != null)
+            {
+                if (RequiresUpdate())
                 {
-                    var updateUrl = $"https://github.com/ivanpmartell/LittleWarGameClient/releases/download/v{LatestVersion}/";
-                    if (Environment.Is64BitProcess)
-                        updateUrl += "update_x64.zip";
+                    if (DialogResult.OK == MessageBox.Show("An update is available. Press OK to download it and exit the game", "Update", MessageBoxButtons.OKCancel))
+                    {
+                        var updateUrl = $"https://github.com/ivanpmartell/LittleWarGameClient/releases/download/v{LatestVersion}/";
+                        if (Environment.Is64BitProcess)
+                            updateUrl += "update_x64.zip";
+                        else
+                            updateUrl += "update_x86.zip";
+                        Process.Start(new ProcessStartInfo(updateUrl) { UseShellExecute = true });
+                        GameForm.Instance.Close();
+                    }
                     else
-                        updateUrl += "update_x86.zip";
-                    Process.Start(new ProcessStartInfo(updateUrl) { UseShellExecute = true });
-                    GameForm.Instance.Close();
+                        OverlayForm.Instance.AddOverlayMessage("updateCancel", new Notification("Update canceled"));
                 }
+                else
+                    OverlayForm.Instance.AddOverlayMessage("updateNA", new Notification("No update required"));
+            }
+            else
+                OverlayForm.Instance.AddOverlayMessage("updateError", new Notification("Network Error: Could not check for newer versions"));
             settings.SetLastUpdateChecked(DateTime.Now.Date);
             await settings.SaveAsync();
         }
@@ -83,10 +94,7 @@ namespace LittleWarGameClient.Handlers
         private async Task<Version?> GetLatestGitHubVersion(int retries = 3)
         {
             if (retries < 1)
-            {
-                OverlayForm.Instance.AddOverlayMessage("updateError", new Notification("Network Error: Could not check for newer versions"));
                 return null;
-            }
             try
             {
                 var client = new GitHubClient(new ProductHeaderValue("LWGClient"));

@@ -29,6 +29,16 @@
         );
     },
 
+    pressInjectJSCheckbox: function (element) {
+       CefSharp.PostMessage(
+            JSON.stringify({
+                Id: element.id,
+                Value: element.checked.toString(),
+                Type: "InjectJS"
+            })
+        );
+    },
+
     changeVolume: function (element, volumeLevel) {
         CefSharp.PostMessage(
             JSON.stringify({
@@ -145,7 +155,7 @@
 };
 
 addons.init = {
-    function(clientVersion, mouseLock, volume) {
+    function(clientVersion, mouseLock, volume, injectJS) {
         this.handleConnectionError();
         this.addExitButton();
         this.addRefreshButton();
@@ -155,6 +165,7 @@ addons.init = {
         this.addVolumeSlider(volume);
         this.addClientVersion(clientVersion);
         this.replaceMouseLockCheckbox(mouseLock);
+        this.addInjectJSCheckbox(injectJS);
         var fullScreenButton = document.getElementById("optionsFullscreenButton");
         fullScreenButton.onclick = function () {
             addons.pressFullScreenButton(this);
@@ -292,6 +303,26 @@ addons.init = {
             lockContainer.appendChild(mouseLockCheckbox);
             mouseLockCheckbox.onchange = function () {
                 addons.pressMouseLockCheckbox(this);
+            };
+        }
+    },
+
+    addInjectJSCheckbox: function (injectJS) {
+        var injectJSId = "injectJSCheckbox";
+        if (!document.getElementById(injectJSId)) {
+            var injectJSCheckbox = document.createElement("input");
+            injectJSCheckbox.id = injectJSId;
+            injectJSCheckbox.type = "checkbox";
+            injectJSCheckbox.checked = injectJS;
+            var injectJSContainer = document.createElement("p");
+            injectJSContainer.id = "injectLabel";
+            injectJSContainer.title = "Additional gameplay functionality will become available (e.g. Steal unit from group)";
+            injectJSContainer.innerText = "Inject additional gameplay functionality";
+            injectJSContainer.appendChild(injectJSCheckbox);
+            var optionsList = document.getElementById("optionsChecklistDiv");
+            optionsList.appendChild(injectJSContainer);
+            injectJSCheckbox.onchange = function () {
+                addons.pressInjectJSCheckbox(this);
             };
         }
     },

@@ -5,22 +5,27 @@ namespace LittleWarGameClient.Handlers
 {
     internal class FontHandler
     {
-        private static FontFamily? gameFont;
-        internal static FontFamily lwgFont
+        private static FontFamily? lwgFontFamily = null;
+        internal static FontFamily gameFontFamily
         {
             get
             {
-                if (gameFont == null)
+                if (lwgFontFamily == null)
                 {
                     string font_filename = "lwgFont.ttf";
                     if (!File.Exists(font_filename))
                         File.WriteAllBytes(font_filename, Resources.LcdSolidFont);
                     PrivateFontCollection pfc = new();
                     pfc.AddFontFile(font_filename);
-                    gameFont = pfc.Families[0];
+                    lwgFontFamily = pfc.Families[0];
                 }
-                return gameFont;
+                return lwgFontFamily;
             }
+        }
+
+        internal static Font gameFont(float size)
+        {
+            return new Font(gameFontFamily, size, FontStyle.Regular, GraphicsUnit.Point);
         }
     }
 }

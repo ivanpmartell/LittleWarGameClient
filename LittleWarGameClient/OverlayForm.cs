@@ -44,9 +44,8 @@ namespace LittleWarGameClient
         {
             overlayMessages = new BDictionary<string, Notification>();
             IsActivated = false;
+            Font = FontHandler.gameFont(21.75F);
             InitializeComponent();
-            Font = new Font(FontHandler.lwgFont, 21.75F, FontStyle.Regular, GraphicsUnit.Point);
-
             try
             {
                 SteamClient.Init(480);

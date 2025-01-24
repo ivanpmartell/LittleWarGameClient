@@ -63,6 +63,13 @@ namespace LittleWarGameClient.Helpers
                             GameForm.Instance.VolumeChangePostLogic(float.Parse(msg.Value));
                         }
                         break;
+                    case ButtonType.InjectJS:
+                        if (msg.Value != null)
+                            GameForm.Instance.InvokeUI(() =>
+                            {
+                                GameForm.Instance.InjectJS(bool.Parse(msg.Value));
+                            });
+                        break;
                 }
             }
         }
@@ -75,6 +82,7 @@ namespace LittleWarGameClient.Helpers
         MouseLock,
         InitComplete,
         VolumeChanging,
-        VolumeChanged
+        VolumeChanged,
+        InjectJS
     }
 }

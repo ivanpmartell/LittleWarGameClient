@@ -1,5 +1,6 @@
 ﻿using CefSharp;
 using CefSharp.Handler;
+using System.Text.RegularExpressions;
 
 namespace LittleWarGameClient.Interceptors
 {
@@ -7,7 +8,11 @@ namespace LittleWarGameClient.Interceptors
     {
         protected override IResourceRequestHandler? GetResourceRequestHandler(IWebBrowser chromiumWebBrowser, IBrowser browser, IFrame frame, IRequest request, bool isNavigation, bool isDownload, string requestInitiator, ref bool disableDefaultHandling)
         {
-            if (request.Url == $"{GameForm.baseUrl}/js/lwg-5.0.0.js")
+            if (!request.Url.EndsWith(".js"))
+                return null;
+            string gameplayCodePathRegex = "/play/js/lwg-([\\d+]+\\.)+js";
+            Match match = Regex.Match(request.Url, gameplayCodePathRegex);
+            if (match.Success)
             {
                 return new OverrideJavascript();
             }
@@ -26,7 +31,7 @@ namespace LittleWarGameClient.Interceptors
     {
         protected override IResourceHandler GetResourceHandler(IWebBrowser chromiumWebBrowser, IBrowser browser, IFrame frame, IRequest request)
         {
-            FileStream fs = File.Open("js/lwg-5.0.0.js", FileMode.Open);
+            FileStream fs = File.Open("js/lwg.js", FileMode.Open);
             return ResourceHandler.FromStream(fs, mimeType: Cef.GetMimeType("js"), true);
         }
     }

@@ -18,7 +18,7 @@ namespace LittleWarGameClient
         public SplashScreen()
         {
             InitializeComponent();
-            splashText.Font = new Font(FontHandler.lwgFont, 24F, FontStyle.Regular, GraphicsUnit.Point);
+            splashText.Font = FontHandler.gameFont(24F);
         }
 
         internal void InvokeUI(Action a)
