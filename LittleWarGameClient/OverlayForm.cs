@@ -60,12 +60,18 @@ namespace LittleWarGameClient
         {
             for (int i = 0; i < overlayMessages.Count; i++)
             {
-                var overlayMessageValue = overlayMessages.TryGet(i);
-                if (overlayMessageValue.HasValue)
-                {
-                    var notification = overlayMessageValue.Value.Value.Message;
-                    g.DrawText($" >{notification}", D2DColor.Yellow, Font, 0, (i + 1) * 30);
+                string notification = "";
+                try {
+                    var overlayMessageValue = overlayMessages.TryGet(i);
+                    if (overlayMessageValue.HasValue)
+                        notification = overlayMessageValue.Value.Value.Message;
                 }
+                catch (Exception)
+                {
+                    continue;
+                }
+                if (!String.IsNullOrEmpty(notification))
+                    g.DrawText($" >{notification}", D2DColor.Yellow, Font, 0, (i + 1) * 30);
             }
         }
 
