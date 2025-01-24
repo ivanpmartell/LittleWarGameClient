@@ -24060,8 +24060,10 @@ Game.prototype.getReplayFile = function() {
   }
 
   // build and return stringified replay object
+  const currentUTC = new Date().toISOString();
   return JSON.stringify({
     map: this.name,
+    gamePlayed: currentUTC,
     mapVersion: this.data.timestamp,
     gameVersion: GAME_VERSION,
     players: p,
