@@ -97,7 +97,7 @@ namespace LittleWarGameClient
             settings.SetInjectJS(choice);
             await settings.SaveAsync();
             if (DialogResult.OK == MessageBox.Show("Injecting additional gameplay functionality requires reloading the game. Reload now?", "Update", MessageBoxButtons.OKCancel))
-                webBrowser.Reload(true);
+                ReloadGame();
         }
 
         internal async void ToggleFullscreen()
@@ -132,6 +132,11 @@ namespace LittleWarGameClient
         {
             FormBorderStyle = FormBorderStyle.Sizable;
             WindowState = PreviousWindowState;
+        }
+
+        internal void ReloadGame()
+        {
+            webBrowser.Reload(true);
         }
 
         private void CaptureCursor()

@@ -19,6 +19,16 @@
         );
     },
 
+    pressReloadButton: function (element) {
+        CefSharp.PostMessage(
+            JSON.stringify({
+                Id: element.id,
+                Value: "Pressed",
+                Type: "Reload"
+            })
+        );
+    },
+
     pressMouseLockCheckbox: function (element) {
        CefSharp.PostMessage(
             JSON.stringify({
@@ -218,7 +228,7 @@ addons.init = {
         reconnectButton.style = "position: relative; left: 30%; width: fit-content;";
         reconnectButton.onmouseover = function() { this.style.color='darkorange' };
         reconnectButton.onmouseout =  function() { this.style.color='inherit' };
-        reconnectButton.onclick =  function() { location.reload(); };
+        reconnectButton.onclick =  function() { addons.pressReloadButton(this); };
         windowTitle.insertAdjacentElement('afterend', reconnectButton);
     },
     
@@ -266,7 +276,7 @@ addons.init = {
           refreshButton.setAttribute("style", "color: lightgreen; padding-top: 1.5px;");
             var optionButtons = document.getElementById("optionsButtonsDiv");
             optionButtons.insertBefore(refreshButton, optionButtons.firstChild);
-            refreshButton.onclick = function () { location.reload(); };
+            refreshButton.onclick = function() { addons.pressReloadButton(this); };
         }
     },
 

@@ -70,6 +70,12 @@ namespace LittleWarGameClient.Helpers
                                 GameForm.Instance.InjectJS(bool.Parse(msg.Value));
                             });
                         break;
+                    case ButtonType.Reload:
+                        GameForm.Instance.InvokeUI(() =>
+                        {
+                            GameForm.Instance.ReloadGame();
+                        });
+                        break;
                 }
             }
         }
@@ -83,6 +89,7 @@ namespace LittleWarGameClient.Helpers
         InitComplete,
         VolumeChanging,
         VolumeChanged,
-        InjectJS
+        InjectJS,
+        Reload
     }
 }
