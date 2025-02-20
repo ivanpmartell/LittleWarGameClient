@@ -7,24 +7,29 @@ namespace LittleWarGameClient.Handlers
 {
     internal class AudioHandler : IAudioSessionEventsHandler
     {
-        private readonly MMDevice? mainDevice;
-        private AudioSessionControl? currentSession;
+        private readonly MMDevice? mainDevice = null;
+        private AudioSessionControl? currentSession = null;
         private readonly string formTitle;
 
         public AudioHandler(string formTitle)
         {
             this.formTitle = formTitle;
-            var etor = new MMDeviceEnumerator();
-            mainDevice = etor.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
-            if (mainDevice != null)
-            {
-                var sessions = mainDevice.AudioSessionManager.Sessions;
-                for (int i = 0; i < sessions.Count; i++)
+            try {
+                var etor = new MMDeviceEnumerator();
+                mainDevice = etor.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+                if (mainDevice != null)
                 {
-                    var session = sessions[i];
-                    ChangeTextAndIcon(session);
+                    var sessions = mainDevice.AudioSessionManager.Sessions;
+                    for (int i = 0; i < sessions.Count; i++)
+                    {
+                        var session = sessions[i];
+                        ChangeTextAndIcon(session);
+                    }
+                    mainDevice.AudioSessionManager.OnSessionCreated += AudioSessionManager_OnSessionCreated;
                 }
-                mainDevice.AudioSessionManager.OnSessionCreated += AudioSessionManager_OnSessionCreated;
+            }
+            catch (Exception ex) {
+                MessageBox.Show("Could not connect to audio interfaces. Global client audio will not function correctly.", "Error", MessageBoxButtons.OK);
             }
         }
 
