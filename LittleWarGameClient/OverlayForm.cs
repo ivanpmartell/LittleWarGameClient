@@ -1,8 +1,8 @@
 ﻿using LittleWarGameClient.Handlers;
 using Loyc.Collections;
-using nud2dlib;
-using nud2dlib.Windows.Forms;
 using Steamworks;
+using SharpGL;
+using Loyc;
 
 namespace LittleWarGameClient
 {
@@ -18,7 +18,7 @@ namespace LittleWarGameClient
         }
     }
 
-    internal partial class OverlayForm : D2DForm
+    internal partial class OverlayForm : Form
     {
         private static OverlayForm? formInstance;
         internal static OverlayForm Instance
@@ -56,8 +56,14 @@ namespace LittleWarGameClient
             catch { }
         }
 
-        protected override void OnRender(D2DGraphics g)
+        private void openGLControl1_OpenGLDraw(object sender, RenderEventArgs e)
         {
+            //  Get the OpenGL object, just to clean up the code.
+            OpenGL gl = this.openGLControl1.OpenGL;
+
+            gl.Clear(OpenGL.GL_COLOR_BUFFER_BIT | OpenGL.GL_DEPTH_BUFFER_BIT);	// Clear The Screen And The Depth Buffer
+            gl.LoadIdentity();					// Reset The View
+
             for (int i = 0; i < overlayMessages.Count; i++)
             {
                 string notification = "";
@@ -71,7 +77,7 @@ namespace LittleWarGameClient
                     continue;
                 }
                 if (!String.IsNullOrEmpty(notification))
-                    g.DrawText($" >{notification}", D2DColor.Yellow, Font, 0, (i + 1) * 30);
+                    gl.DrawText(0, (i + 1) * 20, 1.0f, 1.0f, 0.0f, "LCD Solid", 14.0f, $" >{notification}");
             }
         }
 
