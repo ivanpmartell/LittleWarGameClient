@@ -29,6 +29,8 @@ namespace LittleWarGameClient.Handlers
                 }
             }
             catch (Exception ex) {
+                mainDevice = null;
+                currentSession = null;
                 MessageBox.Show("Could not connect to audio interfaces. Global client audio will not function correctly.", "Error", MessageBoxButtons.OK);
             }
         }
