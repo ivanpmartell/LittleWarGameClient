@@ -26,7 +26,7 @@ namespace LittleWarGameClient
 #pragma warning restore CS8618
 
         internal const string baseUrl = @"https://littlewargame.com/play";
-        private readonly SettingsHandler settings;
+        private readonly SettingsHandler settings = new SettingsHandler();
         private readonly KeyboardHandler kbHandler;
         private readonly VersionHandler versionHandler;
         private readonly AudioHandler audioHandler;
@@ -48,7 +48,6 @@ namespace LittleWarGameClient
             InitializeComponent();
             Text = $"Littlewargame({InstanceName})";
             loadingText.Font = FontHandler.gameFont(48F);
-            settings = new SettingsHandler();
             audioHandler = new AudioHandler(Text);
             kbHandler = new KeyboardHandler(settings);
             versionHandler = new VersionHandler(settings);
