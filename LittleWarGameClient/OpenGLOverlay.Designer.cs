@@ -1,6 +1,7 @@
-﻿namespace LittleWarGameClient
+﻿
+namespace LittleWarGameClient
 {
-    partial class OverlayForm
+    partial class OpenGLOverlay
     {
         /// <summary>
         /// Required designer variable.
@@ -28,16 +29,9 @@
         /// </summary>
         private void InitializeComponent()
         {
-            components = new System.ComponentModel.Container();
-            textTimer = new System.Windows.Forms.Timer(components);
             openGLControl1 = new SharpGL.OpenGLControl();
             ((System.ComponentModel.ISupportInitialize)openGLControl1).BeginInit();
             SuspendLayout();
-            // 
-            // textTimer
-            // 
-            textTimer.Interval = 1000;
-            textTimer.Tick += textTimer_Tick;
             // 
             // openGLControl1
             // 
@@ -54,7 +48,7 @@
             openGLControl1.TabIndex = 0;
             openGLControl1.OpenGLDraw += openGLControl1_OpenGLDraw;
             // 
-            // OverlayForm
+            // OpenGLOverlay
             // 
             AutoScaleMode = AutoScaleMode.None;
             BackColor = Color.Black;
@@ -65,20 +59,19 @@
             FormBorderStyle = FormBorderStyle.None;
             Margin = new Padding(3, 2, 3, 2);
             MinimumSize = new Size(1264, 681);
-            Name = "OverlayForm";
+            Name = "OpenGLOverlay";
             ShowIcon = false;
             ShowInTaskbar = false;
-            Text = "OverlayForm";
+            Text = "OpenGLOverlay";
             TransparencyKey = Color.Black;
-            FormClosing += OverlayForm_FormClosing;
-            Load += OverlayForm_Load;
-            Shown += OverlayForm_Shown;
+            FormClosing += OpenGLOverlay_FormClosing;
+            Load += this.OpenGLOverlay_Load;
+            Shown += OpenGLOverlay_Shown;
             ((System.ComponentModel.ISupportInitialize)openGLControl1).EndInit();
             ResumeLayout(false);
         }
 
         #endregion
-        private System.Windows.Forms.Timer textTimer;
         private SharpGL.OpenGLControl openGLControl1;
     }
 }

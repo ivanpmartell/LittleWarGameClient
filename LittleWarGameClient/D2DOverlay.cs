@@ -3,47 +3,27 @@ using Loyc.Collections;
 using Steamworks;
 using SharpGL;
 using Loyc;
+using nud2dlib.Windows.Forms;
+using nud2dlib;
+using LittleWarGameClient.Helpers;
 
 namespace LittleWarGameClient
 {
-    internal readonly record struct Notification
+    internal partial class D2DOverlay : D2DForm
     {
-        internal string Message { get; }
-        internal DateTime PostedTime { get; }
-
-        internal Notification(string msg)
-        {
-            Message = msg;
-            PostedTime = DateTime.Now;
-        }
-    }
-
-    internal partial class OverlayForm : Form
-    {
-        private static OverlayForm? formInstance;
-        internal static OverlayForm Instance
+        private static D2DOverlay? formInstance;
+        internal static D2DOverlay Instance
         {
             get
             {
                 if (formInstance == null || formInstance.IsDisposed)
-                    formInstance = new OverlayForm();
+                    formInstance = new D2DOverlay();
                 return formInstance;
             }
         }
 
-        private bool IsGameFormLoaded = false;
-        private readonly BDictionary<string, Notification> overlayMessages;
-        internal void AddOverlayMessage(string name, Notification notification)
+        internal D2DOverlay()
         {
-            overlayMessages[name] = new Notification(notification.Message);
-        }
-
-        internal bool IsActivated { get; private set; }
-
-        internal OverlayForm()
-        {
-            overlayMessages = new BDictionary<string, Notification>();
-            IsActivated = false;
             Font = FontHandler.gameFont(21.75F);
             InitializeComponent();
             try
@@ -56,18 +36,14 @@ namespace LittleWarGameClient
             catch { }
         }
 
-        private void openGLControl1_OpenGLDraw(object sender, RenderEventArgs e)
+        protected override void OnRender(D2DGraphics g)
         {
-            //  Get the OpenGL object, just to clean up the code.
-            OpenGL gl = this.openGLControl1.OpenGL;
-
-            gl.Clear(OpenGL.GL_COLOR_BUFFER_BIT | OpenGL.GL_DEPTH_BUFFER_BIT);	// Clear The Screen And The Depth Buffer
-            gl.LoadIdentity();					// Reset The View
-
+            var overlayMessages = OverlayHelper.Instance.getOverlayMessages();
             for (int i = 0; i < overlayMessages.Count; i++)
             {
                 string notification = "";
-                try {
+                try
+                {
                     var overlayMessageValue = overlayMessages.TryGet(i);
                     if (overlayMessageValue.HasValue)
                         notification = overlayMessageValue.Value.Value.Message;
@@ -77,16 +53,7 @@ namespace LittleWarGameClient
                     continue;
                 }
                 if (!String.IsNullOrEmpty(notification))
-                    gl.DrawText(0, (i + 1) * 20, 1.0f, 1.0f, 0.0f, "LCD Solid", 14.0f, $" >{notification}");
-            }
-        }
-
-        private void textTimer_Tick(object sender, EventArgs e)
-        {
-            for (int i = 0; i < overlayMessages.Count; i++)
-            {
-                if (overlayMessages[i].Value.PostedTime.AddSeconds(6) < DateTime.Now)
-                    overlayMessages.RemoveAt(i);
+                    g.DrawText($" >{notification}", D2DColor.Yellow, Font, 0, (i + 1) * 30);
             }
         }
 
@@ -96,7 +63,7 @@ namespace LittleWarGameClient
             {
                 InvokeUI(() =>
                 {
-                    IsActivated = true;
+                    GameForm.Instance.isOverlayActivated = true;
                     TransparencyKey = Color.Fuchsia;
                     GameForm.Instance.ActiveControl = null;
                 });
@@ -105,7 +72,7 @@ namespace LittleWarGameClient
             {
                 InvokeUI(() =>
                 {
-                    IsActivated = false;
+                    GameForm.Instance.isOverlayActivated = false;
                     TransparencyKey = Color.Black;
                     GameForm.Instance.ActiveControl = GameForm.Instance.webBrowser;
                 });
@@ -130,30 +97,30 @@ namespace LittleWarGameClient
             }
         }
 
-        private void OverlayForm_Load(object sender, EventArgs e)
-        {
-            if (!IsGameFormLoaded)
-            {
-                IsGameFormLoaded = true;
-                GameForm.Instance.Show();
-            }
-        }
-
-        private void OverlayForm_FormClosing(object sender, FormClosingEventArgs e)
+        private void D2DOverlay_FormClosing(object sender, FormClosingEventArgs e)
         {
             switch (e.CloseReason)
             {
                 case CloseReason.None:
                     e.Cancel = true;
                     break;
+                default:
+                    GameForm.Instance.isOverlayActivated = false;
+                    break;
             }
         }
 
-        private void OverlayForm_Shown(object sender, EventArgs e)
+        private void D2DOverlay_Shown(object sender, EventArgs e)
         {
             TopMost = true;
-            textTimer.Enabled = true;
-            AddOverlayMessage($"InitDone", new Notification("Overlay Initialized"));
+            OverlayHelper.Instance.AddOverlayMessage($"InitDone", new Notification("Overlay Initialized"));
+        }
+
+        private void D2DOverlay_Load(object sender, EventArgs e)
+        {
+            Size = GameForm.Instance.webBrowser.Size;
+            var webViewBounds = new Rectangle(GameForm.Instance.webBrowser.PointToScreen(Point.Empty), Size);
+            Location = webViewBounds.Location;
         }
     }
 }

@@ -10,6 +10,23 @@ namespace LittleWarGameClient.Helpers
             settings = s;
         }
 
+        internal static string EnumToCommaSeparatedString<T>() where T : Enum
+        {
+            return string.Join(",", Enum.GetValues(typeof(T)).OfType<T>());
+        }
+
+        internal OverlayType GetVariable(string sectionName, string propertyName, OverlayType defaultValue)
+        {
+            try
+            {
+                return settings[sectionName][propertyName].AsEnum<OverlayType>();
+            }
+            catch
+            {
+                return defaultValue;
+            }
+        }
+
         internal Keys GetVariable(string sectionName, string propertyName, Keys defaultValue)
         {
             try
@@ -134,6 +151,19 @@ namespace LittleWarGameClient.Helpers
         }
 
         internal void SetVariable(string sectionName, string propertyName, Keys value)
+        {
+            Section section = EnsureSection(sectionName);
+            try
+            {
+                section[propertyName] = value.ToString();
+            }
+            catch
+            {
+                section.Add(new Property(propertyName, value.ToString()));
+            }
+        }
+
+        internal void SetVariable(string sectionName, string propertyName, OverlayType value)
         {
             Section section = EnsureSection(sectionName);
             try

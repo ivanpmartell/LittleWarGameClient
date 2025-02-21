@@ -6,6 +6,7 @@ namespace LittleWarGameClient.Handlers
     internal class SettingsHandler
     {
         private readonly string fileName;
+        private const OverlayType defaultOverlayType = OverlayType.OpenGL;
         private const int defaultWidth = 1280;
         private const int defaultHeight = 720;
         private const bool defaultInjectJS = false;
@@ -37,6 +38,7 @@ namespace LittleWarGameClient.Handlers
 
         private async void Init()
         {
+            SetOverlayType(GetOverlayType());
             SetMouseLock(GetMouseLock());
             SetFullScreen(GetFullScreen());
             SetWindowSize(GetWindowSize());
@@ -60,26 +62,6 @@ namespace LittleWarGameClient.Handlers
                     new Property("width", defaultWidth),
                     new Property("height", defaultHeight),
                     new Property("fullscreen", defaultFullscreen)
-                },
-                new Section("Mouse")
-                {
-                    new Property("lock", defaultMouseLock)
-                },
-                new Section("Update")
-                {
-                    new Property("lastChecked", defaultUpdateLastChecked),
-                    new Property("interval", defaultUpdateInterval),
-                },
-                new Section("Hotkeys")
-                {
-                    new Property("optionsMenu", defaultOptionsMenuHotkey.ToString()),
-                    new Property("friendsMenu", defaultFriendsMenuHotkey.ToString()),
-                    new Property("chatHistoryMenu", defaultChatHistoryMenuHotkey.ToString()),
-                    new Property("fullscreen", defaultFullscreenHotkey.ToString())
-                },
-                new Section("Audio")
-                {
-                    new Property("volume", defaultVolume)
                 }
             };
             return settings;
@@ -102,6 +84,16 @@ namespace LittleWarGameClient.Handlers
                 Thread.Sleep(50);
                 await SaveAsync();
             }
+        }
+
+        internal void SetOverlayType(OverlayType value)
+        {
+            helper.SetVariable("Window", "overlay", value);
+        }
+
+        internal OverlayType GetOverlayType()
+        {
+            return helper.GetVariable("Window", "overlay", defaultOverlayType);
         }
 
         internal void SetMouseLock(bool value)

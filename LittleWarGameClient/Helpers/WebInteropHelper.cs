@@ -70,6 +70,13 @@ namespace LittleWarGameClient.Helpers
                                 GameForm.Instance.InjectJS(bool.Parse(msg.Value));
                             });
                         break;
+                    case ButtonType.OverlayType:
+                        if (msg.Value != null)
+                            GameForm.Instance.InvokeUI(() =>
+                            {
+                                GameForm.Instance.OverlayChanged(int.Parse(msg.Value));
+                            });
+                        break;
                     case ButtonType.Reload:
                         GameForm.Instance.InvokeUI(() =>
                         {
@@ -90,6 +97,7 @@ namespace LittleWarGameClient.Helpers
         VolumeChanging,
         VolumeChanged,
         InjectJS,
+        OverlayType,
         Reload
     }
 }

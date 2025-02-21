@@ -28,7 +28,7 @@ namespace LittleWarGameClient.Handlers
                     mainDevice.AudioSessionManager.OnSessionCreated += AudioSessionManager_OnSessionCreated;
                 }
             }
-            catch (Exception ex) {
+            catch (Exception) {
                 mainDevice = null;
                 currentSession = null;
                 MessageBox.Show("Could not connect to audio interfaces. Global client audio will not function correctly.", "Error", MessageBoxButtons.OK);

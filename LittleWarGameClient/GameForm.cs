@@ -3,6 +3,9 @@ using CefSharp.WinForms;
 using LittleWarGameClient.Handlers;
 using LittleWarGameClient.Helpers;
 using LittleWarGameClient.Interceptors;
+using Loyc.Collections;
+using System.Security.Cryptography;
+using System;
 
 namespace LittleWarGameClient
 {
@@ -34,6 +37,8 @@ namespace LittleWarGameClient
         private bool wasSmallWindow = false;
         private bool gameHasLoaded = false;
         private bool mouseLocked;
+
+        internal bool isOverlayActivated = false;
 
         internal GameForm()
         {
@@ -86,6 +91,30 @@ namespace LittleWarGameClient
                 EnterFullscreen();
             else
                 LeaveFullscreen();
+        }
+
+        internal async void OverlayChanged(int overlayChoice)
+        {
+            if (Enum.IsDefined(typeof(OverlayType), overlayChoice))
+            {
+                OverlayType overlayType = (OverlayType)overlayChoice;
+                if (overlayType == settings.GetOverlayType())
+                    return;
+                switch (settings.GetOverlayType())
+                {
+                    case OverlayType.Direct2D:
+                        D2DOverlay.Instance.Close();
+                        break;
+                    case OverlayType.OpenGL:
+                        OpenGLOverlay.Instance.Close();
+                        break;
+                }
+                settings.SetOverlayType(overlayType);
+                await settings.SaveAsync();
+                var prevWindowState = WindowState;
+                WindowState = FormWindowState.Minimized;
+                WindowState = prevWindowState;
+            }
         }
 
         internal async void InjectJS(bool choice)
@@ -197,7 +226,15 @@ namespace LittleWarGameClient
         private void GameForm_LocationChanged(object sender, EventArgs e)
         {
             var webViewBounds = new Rectangle(webBrowser.PointToScreen(Point.Empty), webBrowser.Size);
-            OverlayForm.Instance.Location = webViewBounds.Location;
+            switch (settings.GetOverlayType())
+            {
+                case OverlayType.Direct2D:
+                    D2DOverlay.Instance.Location = webViewBounds.Location;
+                    break;
+                case OverlayType.OpenGL:
+                    OpenGLOverlay.Instance.Location = webViewBounds.Location;
+                    break;
+            }
         }
 
         private void GameForm_Load(object sender, EventArgs e)
@@ -205,10 +242,20 @@ namespace LittleWarGameClient
             SplashScreen.Instance.InvokeUI(() =>
             {
                 SplashScreen.Instance.Close();
+                SplashScreen.Instance.Dispose();
             });
-            OverlayForm.Instance.Size = webBrowser.Size;
             var webViewBounds = new Rectangle(webBrowser.PointToScreen(Point.Empty), webBrowser.Size);
-            OverlayForm.Instance.Location = webViewBounds.Location;
+            switch (settings.GetOverlayType())
+            {
+                case OverlayType.Direct2D:
+                    D2DOverlay.Instance.Size = webBrowser.Size;
+                    D2DOverlay.Instance.Location = webViewBounds.Location;
+                    break;
+                case OverlayType.OpenGL:
+                    OpenGLOverlay.Instance.Size = webBrowser.Size;
+                    OpenGLOverlay.Instance.Location = webViewBounds.Location;
+                    break;
+            }
             Activate();
         }
 
@@ -227,8 +274,18 @@ namespace LittleWarGameClient
 
         private void GameForm_Deactivate(object sender, EventArgs e)
         {
-            if (!OverlayForm.Instance.IsActivated)
-                OverlayForm.Instance.Visible = false;
+            if (!GameForm.Instance.isOverlayActivated)
+            {
+                switch (settings.GetOverlayType())
+                {
+                    case OverlayType.Direct2D:
+                            D2DOverlay.Instance.Visible = false;
+                        break;
+                    case OverlayType.OpenGL:
+                            OpenGLOverlay.Instance.Visible = false;
+                        break;
+                }
+            }
         }
 
         private void GameForm_Activated(object sender, EventArgs e)
@@ -238,8 +295,17 @@ namespace LittleWarGameClient
             if (kbHandler.hasHangingAltKey) //Alt-Tab fix for game
                 SendKeys.Send("%{F16}");
 
-            if (!OverlayForm.Instance.IsDisposed)
-                OverlayForm.Instance.Visible = true;
+            switch (settings.GetOverlayType())
+            {
+                case OverlayType.Direct2D:
+                    if (!D2DOverlay.Instance.IsDisposed)
+                        D2DOverlay.Instance.Visible = true;
+                    break;
+                case OverlayType.OpenGL:
+                    if (!OpenGLOverlay.Instance.IsDisposed)
+                        OpenGLOverlay.Instance.Visible = true;
+                    break;
+            }
         }
 
         private void GameForm_FormClosing(object sender, FormClosingEventArgs e)
@@ -259,7 +325,17 @@ namespace LittleWarGameClient
 
         private void GameForm_Resize(object sender, EventArgs e)
         {
-            OverlayForm.Instance.Size = webBrowser.Size;
+            switch (settings.GetOverlayType())
+            {
+                case OverlayType.Direct2D:
+                    D2DOverlay.Instance.Size = webBrowser.Size;
+                    break;
+                case OverlayType.OpenGL:
+                    //OpenGL specific fix where fullscreen does not allow for transparency
+                    OpenGLOverlay.Instance.Size = new Size(webBrowser.Size.Width, webBrowser.Size.Height - 1);
+                    break;
+            }
+
             CaptureCursor();
             ResizeGameWindows();
         }
@@ -308,7 +384,8 @@ namespace LittleWarGameClient
                     requestCallWhereLoadingFinished = requestCallCounter;
                     var addonJS = System.IO.File.ReadAllText("js/addons.js");
                     webBrowser.ExecuteScriptAsync(addonJS);
-                    ElementMessage.CallJSFunc(webBrowser, "init.function", $"\"{versionHandler.CurrentVersion}\", {settings.GetMouseLock().ToString().ToLower()}, {settings.GetVolume()}, {settings.GetInjectJS().ToString().ToLower()}");
+                    var overlayOptions = SettingsHelper.EnumToCommaSeparatedString<OverlayType>();
+                    ElementMessage.CallJSFunc(webBrowser, "init.function", $"\"{versionHandler.CurrentVersion}\", {settings.GetMouseLock().ToString().ToLower()}, {settings.GetVolume()}, {settings.GetInjectJS().ToString().ToLower()}, {((int)settings.GetOverlayType())}, \"{overlayOptions}\"");
                     kbHandler.InitHotkeyNames((ChromiumWebBrowser)sender, settings);
                 }
             }
@@ -325,7 +402,7 @@ namespace LittleWarGameClient
                 loadingTimer.Enabled = false;
                 gameHasLoaded = false;
             });
-            OverlayForm.Instance.AddOverlayMessage("loadError", new Notification("Error: Website could not be loaded"));
+            OverlayHelper.Instance.AddOverlayMessage("loadError", new Notification("Error: Website could not be loaded"));
         }
 
         private void webBrowser_FrameLoadStart(object sender, FrameLoadStartEventArgs e)
@@ -339,6 +416,18 @@ namespace LittleWarGameClient
                 loadingTimer.Enabled = true;
                 gameHasLoaded = false;
             });
+        }
+    }
+
+    internal readonly record struct Notification
+    {
+        internal string Message { get; }
+        internal DateTime PostedTime { get; }
+
+        internal Notification(string msg)
+        {
+            Message = msg;
+            PostedTime = DateTime.Now;
         }
     }
 }

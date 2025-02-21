@@ -30,7 +30,7 @@
     },
 
     pressMouseLockCheckbox: function (element) {
-       CefSharp.PostMessage(
+        CefSharp.PostMessage(
             JSON.stringify({
                 Id: element.id,
                 Value: element.checked.toString(),
@@ -40,11 +40,21 @@
     },
 
     pressInjectJSCheckbox: function (element) {
-       CefSharp.PostMessage(
+        CefSharp.PostMessage(
             JSON.stringify({
                 Id: element.id,
                 Value: element.checked.toString(),
                 Type: "InjectJS"
+            })
+        );
+    },
+
+    overlaySelected: function (element) {
+        CefSharp.PostMessage(
+            JSON.stringify({
+                Id: element.id,
+                Value: element.value,
+                Type: "OverlayType"
             })
         );
     },
@@ -60,7 +70,7 @@
     },
 
     saveVolumeChange: function (element, volumeLevel) {
-       CefSharp.PostMessage(
+        CefSharp.PostMessage(
             JSON.stringify({
                 Id: element.id,
                 Value: volumeLevel.toString(),
@@ -165,7 +175,7 @@
 };
 
 addons.init = {
-    function(clientVersion, mouseLock, volume, injectJS) {
+    function(clientVersion, mouseLock, volume, injectJS, overlayType, overlayOptions) {
         this.handleConnectionError();
         this.addExitButton();
         this.addRefreshButton();
@@ -176,6 +186,7 @@ addons.init = {
         this.addClientVersion(clientVersion);
         this.replaceMouseLockCheckbox(mouseLock);
         this.addInjectJSCheckbox(injectJS);
+        this.addOverlaySelectDropdown(overlayType, overlayOptions);
         var fullScreenButton = document.getElementById("optionsFullscreenButton");
         fullScreenButton.onclick = function () {
             addons.pressFullScreenButton(this);
@@ -273,7 +284,7 @@ addons.init = {
             refreshButton.id = refreshId;
             refreshButton.title = "Reload Game";
             refreshButton.innerText = "↻";
-          refreshButton.setAttribute("style", "color: lightgreen; padding-top: 1.5px;");
+            refreshButton.setAttribute("style", "color: lightgreen; padding-top: 1.5px;");
             var optionButtons = document.getElementById("optionsButtonsDiv");
             optionButtons.insertBefore(refreshButton, optionButtons.firstChild);
             refreshButton.onclick = function() { addons.pressReloadButton(this); };
@@ -333,6 +344,32 @@ addons.init = {
             optionsList.appendChild(injectJSContainer);
             injectJSCheckbox.onchange = function () {
                 addons.pressInjectJSCheckbox(this);
+            };
+        }
+    },
+
+    addOverlaySelectDropdown: function (overlayType, options) {
+        var overlaySelectId = "selectOverlayDropdown";
+        if (!document.getElementById(overlaySelectId)) {
+            var overlayDropdown = document.createElement("select");
+            overlayDropdown.id = overlaySelectId;
+            optionsArray = options.split(",");
+            for (let i = 0; i < optionsArray.length; i++) {
+                const optionElement = document.createElement('option');
+                optionElement.value = i;
+                optionElement.text = optionsArray[i];
+                overlayDropdown.appendChild(optionElement);
+            }
+            overlayDropdown.selectedIndex = overlayType;
+            var overlayContainer = document.createElement("p");
+            overlayContainer.id = "overlayLabel";
+            overlayContainer.title = "Set the overlay graphics renderer";
+            overlayContainer.innerText = "Overlay graphics engine";
+            overlayContainer.appendChild(overlayDropdown);
+            var scrollOption = document.getElementById("scrollSpeedLabel");
+            scrollOption.insertAdjacentElement('afterend', overlayContainer);
+            overlayDropdown.onchange = function () {
+                addons.overlaySelected(this);
             };
         }
     },

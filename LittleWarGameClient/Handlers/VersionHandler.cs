@@ -1,4 +1,5 @@
-﻿using Octokit;
+﻿using LittleWarGameClient.Helpers;
+using Octokit;
 using System.Diagnostics;
 
 namespace LittleWarGameClient.Handlers
@@ -31,19 +32,19 @@ namespace LittleWarGameClient.Handlers
             CurrentVersion = new Version(0, 0, 0);
 #endif
             LatestVersionObtained += CheckForUpdate;
-            new Thread(() =>
+            if (CanCheckForUpdate())
             {
-                PerformCheck();
-            }).Start();
+                OverlayHelper.Instance.AddOverlayMessage("updateCheck", new Notification("Checking for updates..."));
+                new Thread(() =>
+                {
+                    PerformCheck();
+                }).Start();
+            }
         }
 
         private async void PerformCheck()
         {
-            if (CanCheckForUpdate())
-            {
-                OverlayForm.Instance.AddOverlayMessage("updateCheck", new Notification("Checking for updates..."));
-                LatestVersion = await GetLatestGitHubVersion();
-            }
+            LatestVersion = await GetLatestGitHubVersion();
         }
 
         internal async virtual void CheckForUpdate(object? sender, EventArgs e)
@@ -55,21 +56,25 @@ namespace LittleWarGameClient.Handlers
                     if (DialogResult.OK == MessageBox.Show("An update is available. Press OK to download it and exit the game", "Update", MessageBoxButtons.OKCancel))
                     {
                         var updateUrl = $"https://github.com/ivanpmartell/LittleWarGameClient/releases/download/v{LatestVersion}/";
+                        var env = "x86";
                         if (Environment.Is64BitProcess)
-                            updateUrl += "update_x64.zip";
+                            env = "x64";
+
+                        if (LatestVersion.Minor != CurrentVersion.Minor)
+                            updateUrl += $"lwg_client{env}.zip";
                         else
-                            updateUrl += "update_x86.zip";
+                            updateUrl += $"update_{env}.zip";
                         Process.Start(new ProcessStartInfo(updateUrl) { UseShellExecute = true });
                         GameForm.Instance.Close();
                     }
                     else
-                        OverlayForm.Instance.AddOverlayMessage("updateCancel", new Notification("Update canceled"));
+                        OverlayHelper.Instance.AddOverlayMessage("updateCancel", new Notification("Update canceled"));
                 }
                 else
-                    OverlayForm.Instance.AddOverlayMessage("updateNA", new Notification("No update required"));
+                    OverlayHelper.Instance.AddOverlayMessage("updateNA", new Notification("No update required"));
             }
             else
-                OverlayForm.Instance.AddOverlayMessage("updateError", new Notification("Network Error: Could not check for newer versions"));
+                OverlayHelper.Instance.AddOverlayMessage("updateError", new Notification("Network Error: Could not check for newer versions"));
             settings.SetLastUpdateChecked(DateTime.Now.Date);
             await settings.SaveAsync();
         }

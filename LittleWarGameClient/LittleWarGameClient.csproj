@@ -43,6 +43,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Remove="C:\Users\IvanP\.nuget\packages\sharpgl.winforms\3.1.1\contentFiles\any\netcoreapp3.1\SharpGL.ico" />
+    <Content Remove="C:\Users\IvanP\.nuget\packages\sharpgl.winforms\3.1.1\contentFiles\any\netcoreapp3.1\SharpGL.png" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="Assets\logo.ico" />
 	<ContentWithTargetPath Include="steam\steam_api.dll" Condition=" '$(Platform)' == 'x86' ">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -67,12 +72,17 @@
     <PackageReference Include="IniFile.NET" Version="1.6.0" />
     <PackageReference Include="Loyc.Collections" Version="30.1.2" />
     <PackageReference Include="NAudio" Version="2.2.1" />
+    <PackageReference Include="nud2dlib" Version="2.0.0" Condition=" '$(Platform)' == 'x86' " />
+    <PackageReference Include="nud2dlib-x64" Version="2.0.0" Condition=" '$(Platform)' == 'x64' " />
     <PackageReference Include="Octokit" Version="13.0.1" />
     <PackageReference Include="SharpGL.WinForms" Version="3.1.1" />
     <PackageReference Include="System.Management" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Update="D2DOverlay.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Update="Properties\Resources.Designer.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
@@ -81,6 +91,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Update="D2DOverlay.resx">
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
     <EmbeddedResource Update="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>

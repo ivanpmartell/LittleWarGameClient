@@ -45,7 +45,7 @@ namespace LittleWarGameClient
                 // see https://aka.ms/applicationconfiguration.
                 GameForm.InstanceName = profileName;
                 ApplicationConfiguration.Initialize();
-                Application.Run(OverlayForm.Instance);
+                Application.Run(GameForm.Instance);
             }
             else
             {

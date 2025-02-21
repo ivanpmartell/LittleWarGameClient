@@ -1,5 +1,6 @@
 ﻿using CefSharp;
 using CefSharp.Handler;
+using LittleWarGameClient.Helpers;
 
 namespace LittleWarGameClient.Interceptors
 {
@@ -32,9 +33,9 @@ namespace LittleWarGameClient.Interceptors
         protected override void OnDownloadUpdated(IWebBrowser chromiumWebBrowser, IBrowser browser, DownloadItem downloadItem, IDownloadItemCallback callback)
         {
             if (downloadItem.IsInProgress)
-                OverlayForm.Instance.AddOverlayMessage($"download{downloadItem.Id}", new Notification($"Download progress: {downloadItem.PercentComplete}%"));
+                OverlayHelper.Instance.AddOverlayMessage($"download{downloadItem.Id}", new Notification($"Download progress: {downloadItem.PercentComplete}%"));
             else if (downloadItem.IsComplete)
-                OverlayForm.Instance.AddOverlayMessage($"download{downloadItem.Id}", new Notification("Download completed"));
+                OverlayHelper.Instance.AddOverlayMessage($"download{downloadItem.Id}", new Notification("Download completed"));
         }
     }
 }
