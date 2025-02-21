@@ -57,7 +57,7 @@ namespace LittleWarGameClient
                     continue;
                 }
                 if (!String.IsNullOrEmpty(notification))
-                    gl.DrawText(0, (i + 1) * 20, 1.0f, 1.0f, 0.0f, "LCD Solid", 14.0f, $" >{notification}");
+                    gl.DrawText(0, (i + 1) * 25, 1.0f, 1.0f, 0.0f, "LCD Solid", 14.0f, $" >{notification}");
             }
         }
 

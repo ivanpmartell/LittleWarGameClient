@@ -24,7 +24,7 @@ namespace LittleWarGameClient
 
         internal D2DOverlay()
         {
-            Font = FontHandler.gameFont(21.75F);
+            Font = new Font("LCD Solid", 14.0f);
             InitializeComponent();
             try
             {
@@ -53,7 +53,7 @@ namespace LittleWarGameClient
                     continue;
                 }
                 if (!String.IsNullOrEmpty(notification))
-                    g.DrawText($" >{notification}", D2DColor.Yellow, Font, 0, (i + 1) * 30);
+                    g.DrawText($" >{notification}", D2DColor.Yellow, Font, 0, (i + 1) * 25);
             }
         }
 

@@ -100,6 +100,7 @@ namespace LittleWarGameClient
                 OverlayType overlayType = (OverlayType)overlayChoice;
                 if (overlayType == settings.GetOverlayType())
                     return;
+                await OverlayHelper.Instance.StopAsync();
                 switch (settings.GetOverlayType())
                 {
                     case OverlayType.Direct2D:
