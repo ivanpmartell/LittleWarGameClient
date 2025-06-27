@@ -264,7 +264,7 @@ addons.init = {
         imprintLink.onclick = function () {
             var breakElement = document.createElement("br");
             var divElement = document.createElement("div");
-            divElement.innerHTML = "Windows client made by Ivan Martell<br>© 2024";
+            divElement.innerHTML = "Windows client made by Ivan Martell<br>© 2025";
             var imprint = document.getElementById("addScrollableSubDivTextArea2");
             imprint.appendChild(breakElement);
             imprint.appendChild(divElement);
