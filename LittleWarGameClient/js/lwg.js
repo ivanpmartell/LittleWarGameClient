@@ -39,22 +39,40 @@ HTMLBuilder.prototype.add = function(content) {
 HTMLBuilder.prototype.addReactive = function(getValue, period = 100) {
   const ID = uniqueID('reactive');
   this.html += `<span id=${ID}></span>`;
-  this.addHook(() => {
-    (function update() {
-      const el = document.getElementById(ID);
-      if (el) {
-        const value = getValue();
-
-        if (value instanceof HTMLBuilder) {
-          value.insertInto(el);
-        } else {
-          el.innerHTML = value;
-        }
-
-        setTimeout(update, period);
+  
+  // Create update function that can be called externally
+  const triggerUpdate = () => {
+    const el = document.getElementById(ID);
+    if (el) {
+      const value = getValue();
+      if (value instanceof HTMLBuilder) {
+        value.insertInto(el);
+      } else {
+        el.innerHTML = value;
       }
-    })();
+    }
+  };
+
+  this.addHook(() => {
+    // Initial update
+    triggerUpdate();
+    
+    // Setup interval if period is provided
+    if (period) {
+      const intervalId = setInterval(triggerUpdate, period);
+      // Clean up interval if element is removed
+      const observer = new MutationObserver(() => {
+        if (!document.getElementById(ID)) {
+          clearInterval(intervalId);
+          observer.disconnect();
+        }
+      });
+      observer.observe(document.body, {childList: true, subtree: true});
+    }
   });
+
+  this.triggerUpdate = triggerUpdate;
+  
   return this;
 };
 
@@ -1110,6 +1128,58 @@ module.exports = SOUND;
 
 },{}],7:[function(require,module,exports){
 (function (Buffer){(function (){
+const MIGRATIONS = [
+{
+  name: '20250318_separate_replays.js',
+  up: function() {
+const data = localStorage.getItem('Replays');
+if (localStorage.getItem('Replays')) {
+  const decompressed = Compression.decompressFromString(data);
+  let replays;
+  if (!decompressed) {
+    // The data is either uncompressed JSON or corrupted
+    try {
+      replays = JSON.parse(data);
+    } catch (e) {
+      replays = [];
+    }
+  } else {
+    replays = JSON.parse(decompressed);
+  }
+
+  localStorage.removeItem('Replays');
+
+  const manifest = [];
+  for (const replay of replays) {
+    try {
+      localStorage.setItem(`replay_${replay.id}`, Compression.compressToString(replay.replay));
+      manifest.push({
+        id : replay.id,
+        name : replay.name,
+        ticksCounter : JSON.parse(replay.replay).ticksCounter
+      });
+    } catch (e) {
+      // Just drop it, we don't care _that_ much about losing our precious
+      // autosaved replays. It probably would've gotten dropped soon anyway
+    }
+  }
+
+  while (true) {
+    try {
+      localStorage.setItem('replay_manifest', JSON.stringify(manifest));
+      break;
+    } catch (e) {
+      // Remove one replay from the end
+      const last = manifest.pop();
+      localStorage.removeItem(`replay_${last.id}`);
+    }
+  }
+}
+
+  }
+},
+];
+
 // TODO: deduplicate this with server when/if we merge server and client repos
 
 const Compression = (() => {
@@ -1145,17 +1215,42 @@ const Compression = (() => {
   };
 })();
 
+// Gulp will generate the following map:
+// const MIGRATIONS = [{name, unconditional, up}]
+
+function runMigrations() {
+  if (!localStorage.hasOwnProperty('migrations')) {
+    const fullState = Object.fromEntries(MIGRATIONS.map((migration) => {
+      return [ migration.name, false ];
+    }));
+    localStorage.setItem('migrations', JSON.stringify(fullState));
+  }
+
+  const migrations = JSON.parse(localStorage.getItem('migrations'));
+
+  for (const migration of MIGRATIONS) {
+    if (!migrations[migration.name]) {
+      migration.up();
+      migrations[migration.name] = true;
+    }
+  }
+
+  localStorage.setItem('migrations', JSON.stringify(migrations));
+}
+
+runMigrations();
+
 const Initialization = (() => {
   const Stage = Object.freeze({
-    NO_DEPENDENCY: 0,
-    UI_GENERATED: 1,
-    RESOURCES_LOADED: 2,
-    INITIALIZATION_COMPLETE: 3,
+    NO_DEPENDENCY : 0,
+    UI_GENERATED : 1,
+    RESOURCES_LOADED : 2,
+    INITIALIZATION_COMPLETE : 3,
   });
 
   const callbacks = {};
   let totalResources = 0;
-  let pendingResources = 0;
+  const pendingResources = new Set();
   let currentStage = Stage.NO_DEPENDENCY;
 
   function __registerCallback(callback, stage) {
@@ -1166,17 +1261,11 @@ const Initialization = (() => {
     callbacks[stage].push(callback);
   }
 
-  function onDocumentReady(callback) {
-    __registerCallback(callback, Stage.NO_DEPENDENCY);
-  }
+  function onDocumentReady(callback) { __registerCallback(callback, Stage.NO_DEPENDENCY); }
 
-  function onUIGenerated(callback) {
-    __registerCallback(callback, Stage.UI_GENERATED);
-  }
+  function onUIGenerated(callback) { __registerCallback(callback, Stage.UI_GENERATED); }
 
-  function onResourcesLoaded(callback) {
-    __registerCallback(callback, Stage.RESOURCES_LOADED);
-  }
+  function onResourcesLoaded(callback) { __registerCallback(callback, Stage.RESOURCES_LOADED); }
 
   function onInitializationComplete(callback) {
     __registerCallback(callback, Stage.INITIALIZATION_COMPLETE);
@@ -1190,19 +1279,21 @@ const Initialization = (() => {
     await Promise.all(callbacks[stage].map((cb) => cb()));
   }
 
-  function addPendingResource() {
+  function addPendingResource(name) {
     ++totalResources;
-    ++pendingResources;
+    pendingResources.add(name);
   }
 
-  function loadedPendingResource() {
-    --pendingResources;
+  function loadedPendingResource(name) {
+    if (!pendingResources.delete(name)) {
+      console.log(`Unexpected pending resource loaded: ${name}`);
+    }
 
     // display % loaded
-    const percent = (totalResources - pendingResources) / totalResources;
+    const percent = (totalResources - pendingResources.size) / totalResources;
     c.fillRect(WIDTH / 2 - 296, HEIGHT - 146, 592 * percent, 42);
 
-    if (pendingResources == 0) {
+    if (pendingResources.size == 0) {
       // setTimeout used to prevent out of order execution, since
       // callbacks from previous stages can trigger pendingResources to
       // hit 0
@@ -1213,9 +1304,7 @@ const Initialization = (() => {
     }
   }
 
-  function getStage() {
-    return currentStage;
-  }
+  function getStage() { return currentStage; }
 
   $(document).ready(() => {
     // jQuery cannot handle async callbacks unless we upgrade the version,
@@ -1225,7 +1314,16 @@ const Initialization = (() => {
     runCallbacks(Stage.NO_DEPENDENCY).then(() => runCallbacks(Stage.UI_GENERATED));
   });
 
-  return { onDocumentReady, onUIGenerated, onResourcesLoaded, onInitializationComplete, Stage, addPendingResource, loadedPendingResource, getStage };
+  return {
+    onDocumentReady,
+    onUIGenerated,
+    onResourcesLoaded,
+    onInitializationComplete,
+    Stage,
+    addPendingResource,
+    loadedPendingResource,
+    getStage
+  };
 })();
 
 const AIManager = (() => {
@@ -1235,14 +1333,14 @@ const AIManager = (() => {
   let aiCommit;
 
   // Register a pending resource for the manifest and commit
-  Initialization.addPendingResource();
+  Initialization.addPendingResource('ai-manifest');
 
   async function sendAIToWorker(commit, name, code, isCustom) {
     try {
       await WorkerClient.call('load-ai', {
-        commit: commit,
-        name: name,
-        code: code,
+        commit : commit,
+        name : name,
+        code : code,
       });
     } catch (e) {
       displayInfoMsg(`Error parsing AI file: ${e}`);
@@ -1251,7 +1349,8 @@ const AIManager = (() => {
 
     if (isCustom) {
       interface_.lastChosenAI.set(name);
-      displayInfoMsg(`AI has been loaded as "${name}". To play it, start a singleplayer game and select the AI for one or more of the CPU players.`);
+      displayInfoMsg(`AI has been loaded as "${
+          name}". To play it, start a singleplayer game and select the AI for one or more of the CPU players.`);
 
       customNames.add(name);
     } else {
@@ -1295,20 +1394,21 @@ const AIManager = (() => {
     } catch (e) {
       return false;
     }
-    return await sendAIToWorker(commit, name, code, /* isCustom=*/false);
+    return await sendAIToWorker(commit, name, code, /* isCustom=*/ false);
   }
 
   async function init() {
     try {
-      aiCommit = await httpGet('https://lwg-prod-nyc1.littlewargame.com:8084/ai_commit');
-      await WorkerClient.call('set-ai-commit', { aiCommit: aiCommit });
+      aiCommit = await httpGet('https://server-uk-south.littlewargame.com:8084/ai_commit');
+      await WorkerClient.call('set-ai-commit', {aiCommit : aiCommit});
 
       const manifest = await loadManifest(aiCommit);
       await Promise.all(manifest.map(async (ai) => {
-        Initialization.addPendingResource();
+        const resourceName = `ai-${ai.src}`;
+        Initialization.addPendingResource(resourceName);
         const code = await httpGet(`https://raw.githubusercontent.com/littlewargame/customai/${aiCommit}/${ai.src}`);
-        await sendAIToWorker(aiCommit, ai.name, code, /* isCustom=*/false);
-        Initialization.loadedPendingResource();
+        await sendAIToWorker(aiCommit, ai.name, code, /* isCustom=*/ false);
+        Initialization.loadedPendingResource(resourceName);
       }));
     } catch (e) {
       console.log(`Failed to load AIs: ${e}`);
@@ -1316,19 +1416,17 @@ const AIManager = (() => {
     }
 
     // We got the manifest and commit
-    Initialization.loadedPendingResource();
+    Initialization.loadedPendingResource('ai-manifest');
   }
 
-  function getAICommit() {
-    return aiCommit;
-  }
+  function getAICommit() { return aiCommit; }
 
   function getNames(includeRegularAI, includeCustomAI, commit = undefined) {
     if (!commit) {
       commit = aiCommit;
     }
-    const regularAIs = includeRegularAI ? [...names[commit]] : [];
-    const customAIs = includeCustomAI ? [...customNames] : [];
+    const regularAIs = includeRegularAI ? [...names[commit] ] : [];
+    const customAIs = includeCustomAI ? [...customNames ] : [];
     return regularAIs.concat(customAIs);
   }
 
@@ -1336,12 +1434,12 @@ const AIManager = (() => {
   async function sendCustomAIToWorker(code) {
     const aiNum = customNames.size + 1;
     const name = `Custom AI ${aiNum}`;
-    sendAIToWorker('', name, code, /* isCustom=*/true);
+    sendAIToWorker('', name, code, /* isCustom=*/ true);
   }
 
   Initialization.onDocumentReady(init);
 
-  return { getAICommit, getNames, loadAI, sendCustomAIToWorker };
+  return {getAICommit, getNames, loadAI, sendCustomAIToWorker};
 })();
 
 const Changelog = (() => {
@@ -2259,7 +2357,6 @@ const base_emotes = /* emotesstart*/
     'playerLvl': 2,
     'text': '#1',
     'type': 'emotes',
-    'dbPos': 1,
     'artNr': 'e0001',
   },
 
@@ -2269,8 +2366,17 @@ const base_emotes = /* emotesstart*/
     'playerLvl': 6,
     'text': 'OP',
     'type': 'emotes',
-    'dbPos': 2,
     'artNr': 'e0002',
+  },
+
+  {
+    'name': ':v',
+    'img': 'pacman.png',
+    'gold': 100,
+    'text': ':v',
+    'type': 'emotes',
+    'dbPos': 90,
+    'artNr': 'e0090',
   },
 
   {
@@ -2392,7 +2498,6 @@ const lwg_emotes = [
     'playerLvl': 9,
     'text': 'Skeleton',
     'type': 'emotes',
-    'dbPos': 10,
     'artNr': 'e0010',
   },
 
@@ -2441,7 +2546,6 @@ const lwg_emotes = [
     'playerLvl': 13,
     'artNr': 'e0014',
     'type': 'emotes',
-    'dbPos': 14,
   },
 
   {
@@ -2501,7 +2605,6 @@ const lwg_emotes = [
     'playerLvl': 17,
     'artNr': 'e0020',
     'type': 'emotes',
-    'dbPos': 20,
   },
 
   {
@@ -2511,7 +2614,6 @@ const lwg_emotes = [
     'playerLvl': 20,
     'artNr': 'e0021',
     'type': 'emotes',
-    'dbPos': 21,
   },
 
   {
@@ -2642,7 +2744,6 @@ const lwg_emotes = [
     'text': 'notbad',
     'playerLvl': 8,
     'type': 'emotes',
-    'dbPos': 34,
     'artNr': 'e0034',
   },
 
@@ -2822,7 +2923,6 @@ const lwg_emotes = [
     'playerLvl': 26,
     'text': 'Frog',
     'type': 'emotes',
-    'dbPos': 52,
     'artNr': 'e0052',
   },
 
@@ -2921,25 +3021,23 @@ const lwg_emotes = [
 
 ]/* emotesend*/;
 
-// const cat_emotes = [
-//         'BLEHHH', 'breakdown', 'CRAZY', 'ded', 'faint', 'HUH', 'idk', 'mischevious',
-//         'nuh_uh', 'panicked', 'punch', 'run', 'sigh', 'srry', 'WAA', 'WHAT', 'woohoo'
-//     ].map((name, i) => {
-//     return {
-//         'name': `Cat ${name}`,
-//         'img': `cat_${name}.gif`,
-//         'playerLvl': 2 + 3*i ,
-//         'text': `cat${name}`,
-//         'type': 'emotes',
-//         'dbPos': 66 + i,
-//         'artNr': `e00${66 + i}`,
-//         'author': 'https://emoji.gg/user/freymaxxing'
-//       };
-// });
+const cat_emotes = [
+        'BLEHHH', 'breakdown', 'CRAZY', 'ded', 'faint', 'HUH', 'idk', 'mischevious',
+        'nuh_uh', 'panicked', 'punch', 'run', 'sigh', 'srry', 'WAA', 'WHAT', 'woohoo'
+    ].map((name, i) => {
+    return {
+        'name': `Cat ${name}`,
+        'img': `cat_${name}.gif`,
+        'playerLvl': 2 + 3*i ,
+        'text': `cat${name}`,
+        'type': 'emotes',
+        'artNr': `e00${66 + i}`,
+        'author': 'https://emoji.gg/user/freymaxxing'
+      };
+});
 
 
-// var emotes = [base_emotes, cat_emotes, lwg_emotes].flat();
-var emotes = [base_emotes, lwg_emotes].flat();
+var emotes = [base_emotes, cat_emotes, lwg_emotes].flat();
 
 // hidden emotes
 // these are used for the treasure chest
@@ -3042,7 +3140,6 @@ var skins = /* skinsstart*/
     'name': 'Worker with pitchfork',
     'img': 'worker_with_pitchfork',
     'unit_id_string': 'worker',
-    'dbPos': 8,
     'playerLvl': 5,
     'artNr': 's0008',
     'type': 'skins',
@@ -3116,7 +3213,6 @@ var skins = /* skinsstart*/
     'name': 'Viking Archer',
     'img': 'archerS1',
     'unit_id_string': 'archer',
-    'dbPos': 4,
     'playerLvl': 14,
     'artNr': 's0004',
     'type': 'skins',
@@ -3968,11 +4064,53 @@ var targetRequirementsBase = {
     funcName: 'isGround',
   },
 
+  fullHp: {
+    func: (target) => target.hp == target.type.hp,
+    text: 'Target needs full life.',
+    isTargetRequirement: true,
+    funcName: 'fullHp',
+  },
+
   notFullHp: {
     func: (target) => target.hp < target.type.hp,
-    text: 'Target has full life.',
+    text: 'Target needs to be not full health',
     isTargetRequirement: true,
     funcName: 'notFullHp',
+  },
+
+  hasMana: {
+    func: (target) => target.type.mana > 0,
+    text: "Target must have mana.",
+    isTargetRequirement: true,
+    funcName: 'hasMana',
+  },
+
+  doesNotHaveMana: {
+    func: (target) => target.type.mana <= 0,
+    text: "Target must not have mana.",
+    isTargetRequirement: true,
+    funcName: 'doesNotHaveMana',
+  },
+
+  fullMana: {
+    func: (target) => target.type.mana && target.mana == target.type.mana ,
+    text: 'Target has full mana.',
+    isTargetRequirement: true,
+    funcName: 'fullMana',
+  },
+
+  notFullMana: {
+    func: (target) => target.type.mana && (target.mana < target.type.mana ),
+    text: "Target needs full mana.",
+    isTargetRequirement: true,
+    funcName: 'notFullMana',
+  },
+
+  hasModifier: {
+    func: (target) => target.modifiers.length > 0,
+    text: 'Target needs to have a modifier active.',
+    isTargetRequirement: true,
+    funcName: 'hasModifier',
   },
 };
 
@@ -3987,7 +4125,7 @@ const TAGS = [
 
 let targetRequirementsExtraTypes = TAGS.reduce((entry, name) => {
   entry[`is${name}`] = {
-      func: (target) => target.type[name],
+      func: (target) => target.type[`is${name}`],
       text: `Target needs to be ${name.toLowerCase()}.`,
       isTargetRequirement: true,
       funcName: `is${name}`,
@@ -4014,6 +4152,7 @@ targetFilters1_extra = TAGS.map ((name) => {
   }
 });
 
+// Is this never used?
 targetFilters1 = Object.assign(targetFilters1, ...targetFilters1_extra);
 const IS_WORKER = false;
 
@@ -4076,14 +4215,14 @@ var DEFAULT_VOLUME = 0.20; // default volume percentage for game sounds, music a
 // var SERVER_ADRESS = 'ws://localhost:8083';
 
 // The server and special event placeholders will be filled out by the gulp build
-var SERVER_ADRESS = 'wss://lwg-prod-nyc1.littlewargame.com:8083';
+var SERVER_ADRESS = 'wss://server-uk-south.littlewargame.com:8083';
 const SPECIAL_EVENT = '@@special_event';
 const MICROTRANSACTIONSENABLED = false;
 
 var IS_LOGIC = false;
 var COMMAND_BUTTON_SIZE = 72;
 var INTERFACE_UNIT_IMG_SIZE = 100; // px
-const GAME_VERSION = '5.1.0';
+const GAME_VERSION = '5.3.0';
 
 // Global Variables
 var timestamp = performance.now();
@@ -4341,7 +4480,8 @@ TileType.prototype.replaceReferences = function() {
 // loads an image and returns the image object
 function loadImage(imgFile) {
   try {
-    Initialization.addPendingResource();
+    const resourceName = `img-${imgFile}`;
+    Initialization.addPendingResource(resourceName);
 
     var img = new Image();
 
@@ -4352,7 +4492,7 @@ function loadImage(imgFile) {
         return;
       }
 
-      Initialization.loadedPendingResource();
+      Initialization.loadedPendingResource(resourceName);
     };
     img.src = imgFile;
     img.srcCpy = imgFile; // in case we must load img again, store the path
@@ -13437,1227 +13577,1310 @@ var CliffsWinterData = [
 var TileTypes = [
 
   new TileType({
-    name: 'Tree 1',
-    img: { x: 164, y: 41, w: 28, h: 50 },
-    sizeX: 1,
-    sizeY: 1,
-    isTree: true,
-    blocking: true,
+    name : 'Tree 1',
+    img : {x : 164, y : 41, w : 28, h : 50},
+    sizeX : 1,
+    sizeY : 1,
+    isTree : true,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Tree 2',
-    img: { x: 0, y: 91, w: 28, h: 50 },
-    sizeX: 1,
-    sizeY: 1,
-    isTree: true,
-    blocking: true,
+    name : 'Tree 2',
+    img : {x : 0, y : 91, w : 28, h : 50},
+    sizeX : 1,
+    sizeY : 1,
+    isTree : true,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Tree 3',
-    img: { x: 68, y: 91, w: 28, h: 50 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: true,
+    name : 'Tree 3',
+    img : {x : 68, y : 91, w : 28, h : 50},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Tree 4',
-    img: { x: 136, y: 91, w: 28, h: 50 },
-    sizeX: 1,
-    sizeY: 1,
-    isTree: true,
-    blocking: true,
+    name : 'Tree 4',
+    img : {x : 136, y : 91, w : 28, h : 50},
+    sizeX : 1,
+    sizeY : 1,
+    isTree : true,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Tree 5',
-    img: { x: 108, y: 207, w: 17, h: 30 },
-    sizeX: 1,
-    sizeY: 1,
-    isTree: true,
-    blocking: true,
+    name : 'Tree 5',
+    img : {x : 108, y : 207, w : 17, h : 30},
+    sizeX : 1,
+    sizeY : 1,
+    isTree : true,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Tree 6',
-    img: { x: 132, y: 188, w: 38, h: 50 },
-    sizeX: 2,
-    sizeY: 2,
-    isTree: true,
-    blocking: true,
+    name : 'Tree 6',
+    img : {x : 132, y : 188, w : 38, h : 50},
+    sizeX : 2,
+    sizeY : 2,
+    isTree : true,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Tree 7',
-    img: { x: 174, y: 188, w: 35, h: 50 },
-    sizeX: 2,
-    sizeY: 2,
-    isTree: true,
-    blocking: true,
+    name : 'Tree 7',
+    img : {x : 174, y : 188, w : 35, h : 50},
+    sizeX : 2,
+    sizeY : 2,
+    isTree : true,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Tree 8',
-    img: { x: 188, y: 244, w: 64, h: 64 },
-    sizeX: 3,
-    sizeY: 3,
-    isTree: true,
-    blocking: true,
+    name : 'Tree 8',
+    img : {x : 188, y : 244, w : 64, h : 64},
+    sizeX : 3,
+    sizeY : 3,
+    isTree : true,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Tree 9',
-    img: { x: 3, y: 300, w: 42, h: 50 },
-    sizeX: 2,
-    sizeY: 2,
-    isTree: true,
-    blocking: true,
+    name : 'Tree 9',
+    img : {x : 3, y : 300, w : 42, h : 50},
+    sizeX : 2,
+    sizeY : 2,
+    isTree : true,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Tree 10',
-    img: { x: 39, y: 248, w: 52, h: 50 },
-    sizeX: 2,
-    sizeY: 2,
-    isTree: true,
-    blocking: true,
+    name : 'Tree 10',
+    img : {x : 39, y : 248, w : 52, h : 50},
+    sizeX : 2,
+    sizeY : 2,
+    isTree : true,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Tree 11',
-    img: { x: 48, y: 301, w: 52, h: 45 },
-    sizeX: 2,
-    sizeY: 2,
-    blocking: true,
+    name : 'Tree 11',
+    img : {x : 48, y : 301, w : 52, h : 45},
+    sizeX : 2,
+    sizeY : 2,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Tree 12',
-    img: { x: 105, y: 303, w: 42, h: 50 },
-    sizeX: 2,
-    sizeY: 2,
-    isTree: true,
-    blocking: true,
+    name : 'Tree 12',
+    img : {x : 105, y : 303, w : 42, h : 50},
+    sizeX : 2,
+    sizeY : 2,
+    isTree : true,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Tree 13',
-    img: { x: 150, y: 313, w: 66, h: 65 },
-    sizeX: 3,
-    sizeY: 3,
-    isTree: true,
-    blocking: true,
+    name : 'Tree 13',
+    img : {x : 150, y : 313, w : 66, h : 65},
+    sizeX : 3,
+    sizeY : 3,
+    isTree : true,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Cactus',
-    img: { x: 284, y: 27, w: 18, h: 26 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: true,
+    name : 'Cactus',
+    img : {x : 284, y : 27, w : 18, h : 26},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Cactus 2',
-    img: { x: 284, y: 55, w: 18, h: 26 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: true,
+    name : 'Cactus 2',
+    img : {x : 284, y : 55, w : 18, h : 26},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Cactus 3',
-    img: { x: 362, y: 119, w: 37, h: 45 },
-    sizeX: 2,
-    sizeY: 2,
-    blocking: true,
+    name : 'Cactus 3',
+    img : {x : 362, y : 119, w : 37, h : 45},
+    sizeX : 2,
+    sizeY : 2,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Grave Stone 1',
-    img: { x: 795, y: 275, w: 20, h: 30 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: true,
-    noRandomOffset: true,
+    name : 'Grave Stone 1',
+    img : {x : 795, y : 275, w : 20, h : 30},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : true,
+    noRandomOffset : true,
   }),
 
   new TileType({
-    name: 'Grave Stone 2',
-    img: { x: 817, y: 276, w: 20, h: 29 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: true,
-    noRandomOffset: true,
+    name : 'Grave Stone 2',
+    img : {x : 817, y : 276, w : 20, h : 29},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : true,
+    noRandomOffset : true,
   }),
 
   new TileType({
-    name: 'Grave Stone 3',
-    img: { x: 839, y: 276, w: 20, h: 29 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: true,
-    noRandomOffset: true,
+    name : 'Grave Stone 3',
+    img : {x : 839, y : 276, w : 20, h : 29},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : true,
+    noRandomOffset : true,
   }),
 
   new TileType({
-    name: 'Grave Stone 4',
-    img: { x: 861, y: 286, w: 18, h: 19 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: true,
-    noRandomOffset: true,
+    name : 'Grave Stone 4',
+    img : {x : 861, y : 286, w : 18, h : 19},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : true,
+    noRandomOffset : true,
   }),
 
   new TileType({
-    name: 'Grave Stone 5',
-    img: { x: 787, y: 306, w: 54, h: 45 },
-    sizeX: 3,
-    sizeY: 1,
-    blocking: true,
-    noRandomOffset: true,
+    name : 'Grave Stone 5',
+    img : {x : 787, y : 306, w : 54, h : 45},
+    sizeX : 3,
+    sizeY : 1,
+    blocking : true,
+    noRandomOffset : true,
   }),
 
   new TileType({
-    name: 'Grave Stone 6',
-    img: { x: 843, y: 322, w: 68, h: 29 },
-    sizeX: 4,
-    sizeY: 1,
-    blocking: true,
-    noRandomOffset: true,
+    name : 'Grave Stone 6',
+    img : {x : 843, y : 322, w : 68, h : 29},
+    sizeX : 4,
+    sizeY : 1,
+    blocking : true,
+    noRandomOffset : true,
   }),
 
   new TileType({
-    name: 'Grave Stone 7',
-    img: { x: 916, y: 317, w: 38, h: 59 },
-    sizeX: 2,
-    sizeY: 1,
-    blocking: true,
-    noRandomOffset: true,
+    name : 'Grave Stone 7',
+    img : {x : 916, y : 317, w : 38, h : 59},
+    sizeX : 2,
+    sizeY : 1,
+    blocking : true,
+    noRandomOffset : true,
   }),
 
   new TileType({
-    name: 'Egypt Tile 1',
-    img: { x: 251, y: 25, w: 28, h: 56 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: true,
+    name : 'Egypt Tile 1',
+    img : {x : 251, y : 25, w : 28, h : 56},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Palm',
-    img: { x: 306, y: 23, w: 57, h: 71 },
-    sizeX: 1,
-    sizeY: 1,
-    isTree: true,
-    blocking: true,
+    name : 'Palm',
+    img : {x : 306, y : 23, w : 57, h : 71},
+    sizeX : 1,
+    sizeY : 1,
+    isTree : true,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Tree 14',
-    img: { x: 45, y: 348, w: 26, h: 25 },
-    sizeX: 1,
-    sizeY: 1,
-    isTree: true,
-    blocking: true,
+    name : 'Tree 14',
+    img : {x : 45, y : 348, w : 26, h : 25},
+    sizeX : 1,
+    sizeY : 1,
+    isTree : true,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Tree 15',
-    img: { x: 491, y: 58, w: 23, h: 60 },
-    sizeX: 1,
-    sizeY: 1,
-    isTree: true,
-    blocking: true,
+    name : 'Tree 15',
+    img : {x : 491, y : 58, w : 23, h : 60},
+    sizeX : 1,
+    sizeY : 1,
+    isTree : true,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Stone 1',
-    img: { x: 0, y: 35, w: 28, h: 50 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: true,
+    name : 'Bush 1',
+    img : {x : 790, y : 76, w : 25, h : 25},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Stone 2',
-    img: { x: 28, y: 32, w: 40, h: 60 },
-    sizeX: 2,
-    sizeY: 2,
-    blocking: true,
+    name : 'Bush 2',
+    img : {x : 791, y : 106, w : 20, h : 29},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Stone 3',
-    img: { x: 68, y: 35, w: 28, h: 50 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: true,
+    name : 'Stone 1',
+    img : {x : 0, y : 35, w : 28, h : 50},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Stone 4',
-    img: { x: 96, y: 35, w: 40, h: 60 },
-    sizeX: 2,
-    sizeY: 2,
-    blocking: true,
+    name : 'Stone 2',
+    img : {x : 28, y : 32, w : 40, h : 60},
+    sizeX : 2,
+    sizeY : 2,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Stone 5',
-    img: { x: 136, y: 32, w: 28, h: 50 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: true,
+    name : 'Stone 3',
+    img : {x : 68, y : 35, w : 28, h : 50},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Stone 10',
-    img: { x: 44, y: 376, w: 18, h: 20 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: true,
+    name : 'Stone 4',
+    img : {x : 96, y : 35, w : 40, h : 60},
+    sizeX : 2,
+    sizeY : 2,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Stone 16',
-    img: { x: 94, y: 252, w: 36, h: 45 },
-    sizeX: 2,
-    sizeY: 2,
-    blocking: true,
+    name : 'Stone 5',
+    img : {x : 136, y : 32, w : 28, h : 50},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Stone 17',
-    img: { x: 130, y: 252, w: 40, h: 45 },
-    sizeX: 2,
-    sizeY: 2,
-    blocking: true,
+    name : 'Stone 10',
+    img : {x : 44, y : 376, w : 18, h : 20},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Stone 18',
-    img: { x: 567, y: 50, w: 26, h: 31 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: true,
+    name : 'Stone 16',
+    img : {x : 94, y : 252, w : 36, h : 45},
+    sizeX : 2,
+    sizeY : 2,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Wall',
-    img: { x: 192, y: 2, w: 60, h: 78 },
-    sizeX: 2,
-    sizeY: 2,
-    blocking: true,
-    noRandomOffset: true,
+    name : 'Stone 17',
+    img : {x : 130, y : 252, w : 40, h : 45},
+    sizeX : 2,
+    sizeY : 2,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Wall 2',
-    img: { x: 192, y: 80, w: 60, h: 80 },
-    sizeX: 2,
-    sizeY: 2,
-    blocking: true,
-    noRandomOffset: true,
+    name : 'Stone 18',
+    img : {x : 567, y : 50, w : 26, h : 31},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Wall 3',
-    img: { x: 0, y: 160, w: 60, h: 80 },
-    sizeX: 2,
-    sizeY: 2,
-    blocking: true,
-    noRandomOffset: true,
+    name : 'Stone 19',
+    img : {x : 426, y : 254, w : 26, h : 22},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Wall 4',
-    img: { x: 60, y: 160, w: 28, h: 50 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: true,
-    noRandomOffset: true,
+    name : 'Stone 20',
+    img : {x : 452, y : 254, w : 58, h : 57},
+    sizeX : 3,
+    sizeY : 3,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Wall 5',
-    img: { x: 2, y: 354, w: 40, h: 56 },
-    sizeX: 2,
-    sizeY: 2,
-    blocking: true,
-    noRandomOffset: true,
+    name : 'Stone 21',
+    img : {x : 511, y : 254, w : 22, h : 24},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Wall 6',
-    img: { x: 518, y: 54, w: 21, h: 63 },
-    sizeX: 1,
-    sizeY: 3,
-    blocking: true,
-    noRandomOffset: true,
+    name : 'Stone 22',
+    img : {x : 533, y : 254, w : 24, h : 55},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Wall 7',
-    img: { x: 542, y: 54, w: 21, h: 63 },
-    sizeX: 1,
-    sizeY: 3,
-    blocking: true,
-    noRandomOffset: true,
+    name : 'Wall',
+    img : {x : 192, y : 2, w : 60, h : 78},
+    sizeX : 2,
+    sizeY : 2,
+    blocking : true,
+    noRandomOffset : true,
   }),
 
   new TileType({
-    name: 'Wall 8',
-    img: { x: 490, y: 121, w: 53, h: 23 },
-    sizeX: 3,
-    sizeY: 1,
-    blocking: true,
-    noRandomOffset: true,
+    name : 'Wall 2',
+    img : {x : 192, y : 80, w : 60, h : 80},
+    sizeX : 2,
+    sizeY : 2,
+    blocking : true,
+    noRandomOffset : true,
   }),
 
   new TileType({
-    name: 'Wall 9',
-    img: { x: 491, y: 147, w: 37, h: 45 },
-    sizeX: 2,
-    sizeY: 2,
-    blocking: true,
-    noRandomOffset: true,
+    name : 'Wall 3',
+    img : {x : 0, y : 160, w : 60, h : 80},
+    sizeX : 2,
+    sizeY : 2,
+    blocking : true,
+    noRandomOffset : true,
   }),
 
   new TileType({
-    name: 'Invisible Pathing Blocker',
-    img: { x: 875, y: 0, w: 16, h: 16 },
-    imgEditor: { x: 858, y: 0, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: true,
+    name : 'Wall 4',
+    img : {x : 60, y : 160, w : 28, h : 50},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : true,
+    noRandomOffset : true,
   }),
 
   new TileType({
-    name: 'Invisible Pathing Blocker 2x2',
-    img: { x: 892, y: 0, w: 32, h: 32 },
-    imgEditor: { x: 858, y: 17, w: 32, h: 32 },
-    sizeX: 2,
-    sizeY: 2,
-    blocking: true,
+    name : 'Wall 5',
+    img : {x : 2, y : 354, w : 40, h : 56},
+    sizeX : 2,
+    sizeY : 2,
+    blocking : true,
+    noRandomOffset : true,
   }),
 
   new TileType({
-    name: 'Flower 2',
-    img: { x: 0, y: 0, w: 11, h: 12 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    ignoreGrid: true,
-    isGround: true,
+    name : 'Wall 6',
+    img : {x : 518, y : 54, w : 21, h : 63},
+    sizeX : 1,
+    sizeY : 3,
+    blocking : true,
+    noRandomOffset : true,
   }),
 
   new TileType({
-    name: 'Flower 3',
-    img: { x: 11, y: 0, w: 7, h: 6 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    ignoreGrid: true,
-    isGround: true,
+    name : 'Wall 7',
+    img : {x : 542, y : 54, w : 21, h : 63},
+    sizeX : 1,
+    sizeY : 3,
+    blocking : true,
+    noRandomOffset : true,
   }),
 
   new TileType({
-    name: 'Flower 4',
-    img: { x: 18, y: 0, w: 11, h: 12 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    ignoreGrid: true,
-    isGround: true,
+    name : 'Wall 8',
+    img : {x : 490, y : 121, w : 53, h : 23},
+    sizeX : 3,
+    sizeY : 1,
+    blocking : true,
+    noRandomOffset : true,
   }),
 
   new TileType({
-    name: 'Flower 5',
-    img: { x: 29, y: 0, w: 12, h: 11 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    ignoreGrid: true,
-    isGround: true,
+    name : 'Wall 9',
+    img : {x : 491, y : 147, w : 37, h : 45},
+    sizeX : 2,
+    sizeY : 2,
+    blocking : true,
+    noRandomOffset : true,
   }),
 
   new TileType({
-    name: 'Stone 6',
-    img: { x: 181, y: 16, w: 6, h: 6 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    ignoreGrid: true,
-    isGround: true,
+    name : 'Invisible Pathing Blocker',
+    img : {x : 875, y : 0, w : 16, h : 16},
+    imgEditor : {x : 858, y : 0, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Stone 7',
-    img: { x: 164, y: 35, w: 6, h: 6 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    ignoreGrid: true,
-    isGround: true,
+    name : 'Invisible Pathing Blocker 2x2',
+    img : {x : 892, y : 0, w : 32, h : 32},
+    imgEditor : {x : 858, y : 17, w : 32, h : 32},
+    sizeX : 2,
+    sizeY : 2,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Stone 8',
-    img: { x: 170, y: 35, w: 10, h: 6 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    ignoreGrid: true,
-    isGround: true,
+    name : 'Flower 2',
+    img : {x : 0, y : 0, w : 11, h : 12},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    ignoreGrid : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Stone 9',
-    img: { x: 180, y: 35, w: 10, h: 6 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    ignoreGrid: true,
-    isGround: true,
+    name : 'Flower 3',
+    img : {x : 11, y : 0, w : 7, h : 6},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    ignoreGrid : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Grass d 5',
-    img: { x: 41, y: 0, w: 21, h: 15 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    ignoreGrid: true,
-    isGround: true,
+    name : 'Flower 4',
+    img : {x : 18, y : 0, w : 11, h : 12},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    ignoreGrid : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Grass d 6',
-    img: { x: 62, y: 0, w: 12, h: 10 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    ignoreGrid: true,
-    isGround: true,
+    name : 'Flower 5',
+    img : {x : 29, y : 0, w : 12, h : 11},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    ignoreGrid : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Grass d 7',
-    img: { x: 74, y: 0, w: 6, h: 9 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    ignoreGrid: true,
-    isGround: true,
+    name : 'Flower 6',
+    img : {x : 576, y : 254, w : 14, h : 17},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    ignoreGrid : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Grass d 8',
-    img: { x: 80, y: 0, w: 6, h: 9 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    ignoreGrid: true,
-    isGround: true,
+    name : 'Flower 7',
+    img : {x : 590, y : 254, w : 17, h : 17},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    ignoreGrid : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Grass d 9',
-    img: { x: 86, y: 0, w: 6, h: 9 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    ignoreGrid: true,
-    isGround: true,
+    name : 'Flower 8',
+    img : {x : 607, y : 254, w : 9, h : 17},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    ignoreGrid : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Leaf 1',
-    img: { x: 176, y: 16, w: 5, h: 7 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    ignoreGrid: true,
-    isGround: true,
+    name : 'Mushroom 1',
+    img : {x : 557, y : 254, w : 19, h : 26},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : true,
   }),
 
   new TileType({
-    name: 'Leaf 2',
-    img: { x: 188, y: 0, w: 4, h: 7 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    ignoreGrid: true,
-    isGround: true,
+    name : 'Stone 6',
+    img : {x : 181, y : 16, w : 6, h : 6},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    ignoreGrid : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Plant 1',
-    img: { x: 176, y: 23, w: 13, h: 12 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    ignoreGrid: true,
-    isGround: true,
+    name : 'Stone 7',
+    img : {x : 164, y : 35, w : 6, h : 6},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    ignoreGrid : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Wood 1',
-    img: { x: 88, y: 160, w: 26, h: 15 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    ignoreGrid: true,
-    isGround: true,
+    name : 'Stone 8',
+    img : {x : 170, y : 35, w : 10, h : 6},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    ignoreGrid : true,
+    isGround : true,
   }),
 
+  new TileType({
+    name : 'Stone 9',
+    img : {x : 180, y : 35, w : 10, h : 6},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    ignoreGrid : true,
+    isGround : true,
+  }),
+
+  new TileType({
+    name : 'Grass d 5',
+    img : {x : 41, y : 0, w : 21, h : 15},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    ignoreGrid : true,
+    isGround : true,
+  }),
+
+  new TileType({
+    name : 'Grass d 6',
+    img : {x : 62, y : 0, w : 12, h : 10},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    ignoreGrid : true,
+    isGround : true,
+  }),
+
+  new TileType({
+    name : 'Grass d 7',
+    img : {x : 74, y : 0, w : 6, h : 9},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    ignoreGrid : true,
+    isGround : true,
+  }),
+
+  new TileType({
+    name : 'Grass d 8',
+    img : {x : 80, y : 0, w : 6, h : 9},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    ignoreGrid : true,
+    isGround : true,
+  }),
+
+  new TileType({
+    name : 'Grass d 9',
+    img : {x : 86, y : 0, w : 6, h : 9},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    ignoreGrid : true,
+    isGround : true,
+  }),
+
+  new TileType({
+    name : 'Leaf 1',
+    img : {x : 176, y : 16, w : 5, h : 7},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    ignoreGrid : true,
+    isGround : true,
+  }),
+
+  new TileType({
+    name : 'Leaf 2',
+    img : {x : 188, y : 0, w : 4, h : 7},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    ignoreGrid : true,
+    isGround : true,
+  }),
+
+  new TileType({
+    name : 'Plant 1',
+    img : {x : 176, y : 23, w : 13, h : 12},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    ignoreGrid : true,
+    isGround : true,
+  }),
+
+  new TileType({
+    name : 'Wood 1',
+    img : {x : 88, y : 160, w : 26, h : 15},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    ignoreGrid : true,
+    isGround : true,
+  }),
 
   // Grounds
   new TileType({
-    name: 'Grass 1',
-    img: { x: 92, y: 0, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isDefault: true,
-    isGround: true,
+    name : 'Grass 1',
+    img : {x : 92, y : 0, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isDefault : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Grass 2',
-    img: { x: 108, y: 0, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isDefault: true,
-    isGround: true,
+    name : 'Grass 2',
+    img : {x : 108, y : 0, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isDefault : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Grass 3',
-    img: { x: 124, y: 0, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isDefault: true,
-    isGround: true,
+    name : 'Grass 3',
+    img : {x : 124, y : 0, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isDefault : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Grass 4',
-    img: { x: 140, y: 0, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isDefault: true,
-    isGround: true,
+    name : 'Grass 4',
+    img : {x : 140, y : 0, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isDefault : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Grass 5',
-    img: { x: 156, y: 0, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isDefault: true,
-    isGround: true,
+    name : 'Grass 5',
+    img : {x : 156, y : 0, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isDefault : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Grass 21',
-    img: { x: 295, y: 0, w: 17, h: 19 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    ignoreGrid: true,
-    isGround: true,
+    name : 'Grass 21',
+    img : {x : 295, y : 0, w : 17, h : 19},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    ignoreGrid : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Grass 22',
-    img: { x: 252, y: 0, w: 34, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    ignoreGrid: true,
-    isGround: true,
+    name : 'Grass 22',
+    img : {x : 252, y : 0, w : 34, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    ignoreGrid : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Water P Big',
-    img: { x: 622, y: 0, w: 58, h: 47 },
-    sizeX: 3,
-    sizeY: 3,
-    blocking: false,
-    ignoreGrid: true,
-    isGround: true,
+    name : 'Water P Big',
+    img : {x : 622, y : 0, w : 58, h : 47},
+    sizeX : 3,
+    sizeY : 3,
+    blocking : false,
+    ignoreGrid : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Water P Small',
-    img: { x: 568, y: 83, w: 18, h: 18 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    ignoreGrid: true,
-    isGround: true,
+    name : 'Water P Small',
+    img : {x : 568, y : 83, w : 18, h : 18},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    ignoreGrid : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Water P Big Dark',
-    img: { x: 695, y: 51, w: 58, h: 47 },
-    sizeX: 3,
-    sizeY: 3,
-    blocking: false,
-    ignoreGrid: true,
-    isGround: true,
+    name : 'Water P Big Dark',
+    img : {x : 695, y : 51, w : 58, h : 47},
+    sizeX : 3,
+    sizeY : 3,
+    blocking : false,
+    ignoreGrid : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Water P Small Dark',
-    img: { x: 568, y: 104, w: 18, h: 18 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    ignoreGrid: true,
-    isGround: true,
+    name : 'Water P Small Dark',
+    img : {x : 568, y : 104, w : 18, h : 18},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    ignoreGrid : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Ground n 1',
-    img: { x: 32, y: 16, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isDefault: true,
-    isGround: true,
+    name : 'Ground n 1',
+    img : {x : 32, y : 16, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isDefault : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Ground n 2',
-    img: { x: 48, y: 16, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isDefault: true,
-    isGround: true,
+    name : 'Ground n 2',
+    img : {x : 48, y : 16, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isDefault : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Ground n 3',
-    img: { x: 64, y: 16, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isDefault: true,
-    isGround: true,
+    name : 'Ground n 3',
+    img : {x : 64, y : 16, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isDefault : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Ground n 4',
-    img: { x: 80, y: 16, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isDefault: true,
-    isGround: true,
+    name : 'Ground n 4',
+    img : {x : 80, y : 16, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isDefault : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Ground n 5',
-    img: { x: 96, y: 16, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isDefault: true,
-    isGround: true,
+    name : 'Ground n 5',
+    img : {x : 96, y : 16, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isDefault : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Ground n 6',
-    img: { x: 112, y: 16, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isDefault: true,
-    isGround: true,
+    name : 'Ground n 6',
+    img : {x : 112, y : 16, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isDefault : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Ground n 7',
-    img: { x: 128, y: 16, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isDefault: true,
-    isGround: true,
+    name : 'Ground n 7',
+    img : {x : 128, y : 16, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isDefault : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Ground n 8',
-    img: { x: 144, y: 16, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isDefault: true,
-    isGround: true,
+    name : 'Ground n 8',
+    img : {x : 144, y : 16, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isDefault : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Ground n 9',
-    img: { x: 32, y: 16, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isDefault: true,
-    isGround: true,
-  }),
-
-
-  new TileType({
-    name: 'Ground n 10',
-    img: { x: 160, y: 16, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isGround: true,
-    ignoreGrid: true,
-  }),
-
-
-  new TileType({
-    name: 'Ground e 1',
-    img: { x: 32, y: 16, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isDefault: true,
-    isGround: true,
+    name : 'Ground n 9',
+    img : {x : 32, y : 16, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isDefault : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Ground e 2',
-    img: { x: 48, y: 16, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isDefault: true,
-    isGround: true,
+    name : 'Ground n 10',
+    img : {x : 160, y : 16, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isGround : true,
+    ignoreGrid : true,
   }),
 
   new TileType({
-    name: 'Ground e 3',
-    img: { x: 64, y: 16, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isDefault: true,
-    isGround: true,
+    name : 'Ground e 1',
+    img : {x : 32, y : 16, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isDefault : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Snow 1',
-    img: { x: 0, y: 245, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isDefault: true,
-    isGround: true,
+    name : 'Ground e 2',
+    img : {x : 48, y : 16, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isDefault : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Snow 2',
-    img: { x: 16, y: 245, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isDefault: true,
-    isGround: true,
+    name : 'Ground e 3',
+    img : {x : 64, y : 16, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isDefault : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Snow 3',
-    img: { x: 0, y: 261, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isDefault: true,
-    isGround: true,
+    name : 'Snow 1',
+    img : {x : 0, y : 245, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isDefault : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Snow 4',
-    img: { x: 16, y: 261, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isDefault: true,
-    isGround: true,
+    name : 'Snow 2',
+    img : {x : 16, y : 245, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isDefault : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Egypt Ground 1',
-    img: { x: 484, y: 477, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isDefault: true,
-    isGround: true,
+    name : 'Snow 3',
+    img : {x : 0, y : 261, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isDefault : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Egypt Ground 2',
-    img: { x: 500, y: 477, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isDefault: true,
-    isGround: true,
+    name : 'Snow 4',
+    img : {x : 16, y : 261, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isDefault : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Egypt Ground 3',
-    img: { x: 516, y: 477, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isDefault: true,
-    isGround: true,
+    name : 'Egypt Ground 1',
+    img : {x : 484, y : 477, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isDefault : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Egypt Ground 4',
-    img: { x: 532, y: 477, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isDefault: true,
-    isGround: true,
+    name : 'Egypt Ground 2',
+    img : {x : 500, y : 477, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isDefault : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Egypt Ground 5',
-    img: { x: 548, y: 477, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isDefault: true,
-    isGround: true,
+    name : 'Egypt Ground 3',
+    img : {x : 516, y : 477, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isDefault : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Egypt Ground 6',
-    img: { x: 484, y: 477, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isDefault: true,
-    isGround: true,
+    name : 'Egypt Ground 4',
+    img : {x : 532, y : 477, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isDefault : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Grave Ground 1',
-    img: { x: 484 + 380, y: 477, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isDefault: true,
-    isGround: true,
+    name : 'Egypt Ground 5',
+    img : {x : 548, y : 477, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isDefault : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Grave Ground 2',
-    img: { x: 500 + 380, y: 477 + 4, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isDefault: true,
-    isGround: true,
+    name : 'Egypt Ground 6',
+    img : {x : 484, y : 477, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isDefault : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Grave Ground 3',
-    img: { x: 516 + 380, y: 477 + 4, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isDefault: true,
-    isGround: true,
+    name : 'Grave Ground 1',
+    img : {x : 484 + 380, y : 477, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isDefault : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Grave Ground 4',
-    img: { x: 532 + 380, y: 477, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isDefault: true,
-    isGround: true,
+    name : 'Grave Ground 2',
+    img : {x : 500 + 380, y : 477 + 4, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isDefault : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Grave Ground 5',
-    img: { x: 548 + 380, y: 477 + 4, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isDefault: true,
-    isGround: true,
+    name : 'Grave Ground 3',
+    img : {x : 516 + 380, y : 477 + 4, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isDefault : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Grave Ground 6',
-    img: { x: 484 + 380, y: 477, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isDefault: true,
-    isGround: true,
+    name : 'Grave Ground 4',
+    img : {x : 532 + 380, y : 477, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isDefault : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Dirt 1',
-    img: { x: 235, y: 166, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isGround: true,
-    ignoreGrid: true,
-    isTexture: true,
+    name : 'Grave Ground 5',
+    img : {x : 548 + 380, y : 477 + 4, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isDefault : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Dirt 2',
-    img: { x: 241, y: 184, w: 10, h: 9 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isGround: true,
-    ignoreGrid: true,
-    isTexture: true,
+    name : 'Grave Ground 6',
+    img : {x : 484 + 380, y : 477, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isDefault : true,
+    isGround : true,
   }),
 
   new TileType({
-    name: 'Dirt 3',
-    img: { x: 240, y: 195, w: 11, h: 10 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isGround: true,
-    ignoreGrid: true,
-    isTexture: true,
+    name : 'Dirt 1',
+    img : {x : 235, y : 166, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isGround : true,
+    ignoreGrid : true,
+    isTexture : true,
   }),
 
   new TileType({
-    name: 'Dirt 4',
-    img: { x: 236, y: 206, w: 15, h: 15 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isGround: true,
-    ignoreGrid: true,
-    isTexture: true,
+    name : 'Dirt 2',
+    img : {x : 241, y : 184, w : 10, h : 9},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isGround : true,
+    ignoreGrid : true,
+    isTexture : true,
   }),
 
   new TileType({
-    name: 'Dirt 5',
-    img: { x: 235, y: 223, w: 16, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isGround: true,
-    ignoreGrid: true,
-    isTexture: true,
+    name : 'Dirt 3',
+    img : {x : 240, y : 195, w : 11, h : 10},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isGround : true,
+    ignoreGrid : true,
+    isTexture : true,
   }),
 
   new TileType({
-    name: 'Dirt 6',
-    img: { x: 339, y: 0, w: 14, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isGround: true,
-    ignoreGrid: true,
-    isTexture: true,
+    name : 'Dirt 4',
+    img : {x : 236, y : 206, w : 15, h : 15},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isGround : true,
+    ignoreGrid : true,
+    isTexture : true,
   }),
 
   new TileType({
-    name: 'Dirt 7',
-    img: { x: 355, y: 0, w: 13, h: 17 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isGround: true,
-    ignoreGrid: true,
-    isTexture: true,
+    name : 'Dirt 5',
+    img : {x : 235, y : 223, w : 16, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isGround : true,
+    ignoreGrid : true,
+    isTexture : true,
   }),
 
   new TileType({
-    name: 'Dirt 8',
-    img: { x: 369, y: 0, w: 18, h: 14 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isGround: true,
-    ignoreGrid: true,
-    isTexture: true,
+    name : 'Dirt 6',
+    img : {x : 339, y : 0, w : 14, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isGround : true,
+    ignoreGrid : true,
+    isTexture : true,
   }),
 
   new TileType({
-    name: 'Dirt 9',
-    img: { x: 387, y: 0, w: 19, h: 11 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isGround: true,
-    ignoreGrid: true,
-    isTexture: true,
+    name : 'Dirt 7',
+    img : {x : 355, y : 0, w : 13, h : 17},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isGround : true,
+    ignoreGrid : true,
+    isTexture : true,
   }),
 
   new TileType({
-    name: 'Big Dirt 1',
-    img: { x: 412, y: 1, w: 54, h: 54 },
-    sizeX: 3,
-    sizeY: 3,
-    blocking: false,
-    isGround: true,
-    ignoreGrid: true,
-    isTexture: true,
+    name : 'Dirt 8',
+    img : {x : 369, y : 0, w : 18, h : 14},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isGround : true,
+    ignoreGrid : true,
+    isTexture : true,
   }),
 
   new TileType({
-    name: 'Big Dirt 2',
-    img: { x: 467, y: 0, w: 55, h: 54 },
-    sizeX: 3,
-    sizeY: 3,
-    blocking: false,
-    isGround: true,
-    ignoreGrid: true,
-    isTexture: true,
+    name : 'Dirt 9',
+    img : {x : 387, y : 0, w : 19, h : 11},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isGround : true,
+    ignoreGrid : true,
+    isTexture : true,
   }),
 
   new TileType({
-    name: 'Big Dirt 3',
-    img: { x: 374, y: 56, w: 54, h: 56 },
-    sizeX: 3,
-    sizeY: 3,
-    blocking: false,
-    isGround: true,
-    ignoreGrid: true,
-    isTexture: true,
+    name : 'Big Dirt 1',
+    img : {x : 412, y : 1, w : 54, h : 54},
+    sizeX : 3,
+    sizeY : 3,
+    blocking : false,
+    isGround : true,
+    ignoreGrid : true,
+    isTexture : true,
   }),
 
   new TileType({
-    name: 'Big Dirt 4',
-    img: { x: 431, y: 57, w: 54, h: 55 },
-    sizeX: 3,
-    sizeY: 3,
-    blocking: false,
-    isGround: true,
-    ignoreGrid: true,
-    isTexture: true,
+    name : 'Big Dirt 2',
+    img : {x : 467, y : 0, w : 55, h : 54},
+    sizeX : 3,
+    sizeY : 3,
+    blocking : false,
+    isGround : true,
+    ignoreGrid : true,
+    isTexture : true,
   }),
 
   new TileType({
-    name: 'Big Dirt 5',
-    img: { x: 423, y: 114, w: 64, h: 63 },
-    sizeX: 3,
-    sizeY: 3,
-    blocking: false,
-    isGround: true,
-    ignoreGrid: true,
-    isTexture: true,
+    name : 'Big Dirt 3',
+    img : {x : 374, y : 56, w : 54, h : 56},
+    sizeX : 3,
+    sizeY : 3,
+    blocking : false,
+    isGround : true,
+    ignoreGrid : true,
+    isTexture : true,
   }),
 
   new TileType({
-    name: 'Big Dirt 6',
-    img: { x: 422, y: 178, w: 64, h: 62 },
-    sizeX: 3,
-    sizeY: 3,
-    blocking: false,
-    isGround: true,
-    ignoreGrid: true,
-    isTexture: true,
+    name : 'Big Dirt 4',
+    img : {x : 431, y : 57, w : 54, h : 55},
+    sizeX : 3,
+    sizeY : 3,
+    blocking : false,
+    isGround : true,
+    ignoreGrid : true,
+    isTexture : true,
   }),
 
   new TileType({
-    name: 'Snow Ground 1',
-    img: { x: 760, y: 0, w: 71, h: 63 },
-    sizeX: 4,
-    sizeY: 4,
-    blocking: false,
-    isGround: true,
-    ignoreGrid: true,
-    isTexture: true,
+    name : 'Big Dirt 5',
+    img : {x : 423, y : 114, w : 64, h : 63},
+    sizeX : 3,
+    sizeY : 3,
+    blocking : false,
+    isGround : true,
+    ignoreGrid : true,
+    isTexture : true,
   }),
 
   new TileType({
-    name: 'Snow Ground 2',
-    img: { x: 835, y: 0, w: 20, h: 16 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isGround: true,
-    ignoreGrid: true,
-    isTexture: true,
+    name : 'Big Dirt 6',
+    img : {x : 422, y : 178, w : 64, h : 62},
+    sizeX : 3,
+    sizeY : 3,
+    blocking : false,
+    isGround : true,
+    ignoreGrid : true,
+    isTexture : true,
   }),
 
   new TileType({
-    name: 'Stone Tile 1',
-    img: { x: 683, y: 0, w: 14, h: 14 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isGround: true,
-    ignoreGrid: true,
-    isTexture: true,
+    name : 'Snow Ground 1',
+    img : {x : 760, y : 0, w : 71, h : 63},
+    sizeX : 4,
+    sizeY : 4,
+    blocking : false,
+    isGround : true,
+    ignoreGrid : true,
+    isTexture : true,
   }),
 
   new TileType({
-    name: 'Stone Tile 2',
-    img: { x: 697, y: 0, w: 14, h: 14 },
-    sizeX: 1,
-    sizeY: 1,
-    blocking: false,
-    isGround: true,
-    ignoreGrid: true,
-    isTexture: true,
+    name : 'Snow Ground 2',
+    img : {x : 835, y : 0, w : 20, h : 16},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isGround : true,
+    ignoreGrid : true,
+    isTexture : true,
   }),
 
   new TileType({
-    name: 'Stone Tile 3',
-    img: { x: 683, y: 14, w: 30, h: 30 },
-    sizeX: 2,
-    sizeY: 2,
-    blocking: false,
-    isGround: true,
-    ignoreGrid: true,
-    isTexture: true,
+    name : 'Stone Tile 1',
+    img : {x : 683, y : 0, w : 14, h : 14},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isGround : true,
+    ignoreGrid : true,
+    isTexture : true,
   }),
 
   new TileType({
-    name: 'Stone Tile 4',
-    img: { x: 713, y: 0, w: 46, h: 46 },
-    sizeX: 3,
-    sizeY: 3,
-    blocking: false,
-    isGround: true,
-    ignoreGrid: true,
-    isTexture: true,
+    name : 'Stone Tile 2',
+    img : {x : 697, y : 0, w : 14, h : 14},
+    sizeX : 1,
+    sizeY : 1,
+    blocking : false,
+    isGround : true,
+    ignoreGrid : true,
+    isTexture : true,
   }),
 
   new TileType({
-    name: 'Stone Tile 5',
-    img: { x: 596, y: 50, w: 94, h: 94 },
-    sizeX: 6,
-    sizeY: 6,
-    blocking: false,
-    isGround: true,
-    ignoreGrid: true,
-    isTexture: true,
+    name : 'Stone Tile 3',
+    img : {x : 683, y : 14, w : 30, h : 30},
+    sizeX : 2,
+    sizeY : 2,
+    blocking : false,
+    isGround : true,
+    ignoreGrid : true,
+    isTexture : true,
+  }),
+
+  new TileType({
+    name : 'Stone Tile 4',
+    img : {x : 713, y : 0, w : 46, h : 46},
+    sizeX : 3,
+    sizeY : 3,
+    blocking : false,
+    isGround : true,
+    ignoreGrid : true,
+    isTexture : true,
+  }),
+
+  new TileType({
+    name : 'Stone Tile 5',
+    img : {x : 596, y : 50, w : 94, h : 94},
+    sizeX : 6,
+    sizeY : 6,
+    blocking : false,
+    isGround : true,
+    ignoreGrid : true,
+    isTexture : true,
   }),
 
 ];
@@ -21300,41 +21523,51 @@ function escapeHtml(text) {
 };
 
 // Subsitute chat messages
-function kappa(text, permissions) {
-  // replace ish
+function kappa(text, permissions, level) {
+  // Block unwanted characters
   if ((new RegExp('\u5350|\u534D', 'g')).test(text)) {
     return '';
   }
 
   permissions = permissions ? hex32ToBin(permissions) : null;
 
-  // console.dir(permissions);
-  var em = emotes.concat(_emotes2);
+  const allowedEmotes = {};
+  const em = emotes.concat(_emotes2);
 
-  // ?
-  for (var i = 0; i < em.length; i++) {
-    if (!em[i].dbPos || (permissions && em[i].dbPos <= permissions.length &&
-                         permissions.substr(permissions.length - em[i].dbPos, 1) == '1')) {
-      text = text.replace(new RegExp(em[i].text, 'g'), '#<<#<>#<' + i + '#<<#<>#');
+  // We do two passes before replacements to avoid issues with emotes that contain other emotes
+  // First pass: create lookup with temp placeholder tokens
+  for (let i = 0; i < em.length; i++) {
+    const hasPermission =
+        !em[i].dbPos || (permissions && em[i].dbPos <= permissions.length &&
+                         permissions.substr(permissions.length - em[i].dbPos, 1) == '1');
+    const meetsLevelReq = !em[i].playerLvl || level >= em[i].playerLvl;
+
+    if (hasPermission && meetsLevelReq) {
+      const token = `__EMOTE_${i}__`;
+      allowedEmotes[em[i].text] = {
+        token,
+        html : `<img class='kappa' src='imgs/emotes/${em[i].img}' />`
+      };
     }
   }
 
-  // Own name highlighting
-  text = text.replace(new RegExp(networkPlayerName, 'gi'),
-                      '<span class=\'highlighted2\'>' + networkPlayerName + '</span>');
+  // Replace emotes with tokens
+  for (const emoteText in allowedEmotes) {
+    text = text.replace(new RegExp(emoteText, 'g'), allowedEmotes[emoteText].token);
+  }
 
-  // emotes
-  for (var i = 0; i < em.length; i++) {
-    // console.dir(em[i]);
-    if (!em[i].dbPos || (permissions && em[i].dbPos <= permissions.length &&
-                         permissions.substr(permissions.length - em[i].dbPos, 1) == '1')) {
-      text = text.replace(new RegExp('#<<#<>#<' + i + '#<<#<>#', 'g'),
-                          '<img class=\'kappa\' src=\'imgs/emotes/' + em[i].img + '\' />');
-    }
+  // Handle name highlighting
+  text = text.replace(new RegExp(networkPlayerName, 'gi'),
+                      `<span class='highlighted2'>${networkPlayerName}</span>`);
+
+  // Replace tokens with final HTML
+  for (const emoteText in allowedEmotes) {
+    text = text.replace(new RegExp(allowedEmotes[emoteText].token, 'g'),
+                        allowedEmotes[emoteText].html);
   }
 
   return text;
-};
+}
 
 function soundFaceOut() {
   if (soundManager.buildingClickSound[0] && soundManager.buildingClickSound[0].fadeOut) {
@@ -21655,7 +21888,7 @@ function showImprint() {
   soundManager.playSound(SOUND.CLICK);
   $('#addScrollableSubDivTextArea2')
       .html(
-          '<br /><br /><div style=\'margin-left: 30px;\'>littlewargame.com<br /><br />Owner:<br />Addicting Games, Inc.<br />15332 Antioch Street Los Angeles<br /> Suite 200<br /> California 90272<br /> USA</br>email: chris@addictinggames.com</div>');
+          '<br /><br /><div style=\'margin-left: 30px;\'>littlewargame.com<br /><br />Owners:<br />Aicy, glaba and xip.</div>');
   fadeIn($('#playerInfoWindow2'));
   uimanager.playerInfoWindow2.setTitle('<font style=\'color: rgb(255, 248, 57);\'>Imprint</font>');
 };
@@ -22075,21 +22308,28 @@ function killCustomImg(key) {
 
 function reallyBan(player) {
   soundManager.playSound(SOUND.CLICK);
+
+  const deleteButtonID = uniqueID();
   displayInfoMsg(
       new HTMLBuilder()
-          .add(`Ban ${player} for how many hours? (0 is permanent)<br><br>`)
-          .add('<input type=\'text\' id=\'time2Ban\' value =\'0\' /><br><br>')
-          .add('Reason for ban: <input type=\'text\' id=\'reason4Ban\'/><br><br>')
-          .add('<button id=\'confirmBanButton\'>Ban</button>')
+          .add(
+              `Ban length (hours): <input type='number' id='time2Ban' value='0' style='width: 50px;'/><br>`)
+          .add('Reason for ban: <input type=\'text\' id=\'reason4Ban\'/><br>')
+          .add(`Delete chats for past X minutes: <input type='number' id='${
+              deleteButtonID}', value='0' style='width: 50px;'/><br><br>`)
+          .add(`<button id=\'confirmBanButton\'>Ban</button>`)
           .addHook(() => $('#confirmBanButton').click(addClickSound(() => {
             let confirmed = true;
-            if ($('#time2Ban').val() == '0') {
+            if (parseFloat($('#time2Ban').val()) == 0) {
               confirmed = confirm('Permanently ban this player?');
             }
+            const deleteLength = parseFloat($(`#${deleteButtonID}`).val());
             if (confirmed) {
               network.send(`ban<<$${player}<<$${$('#time2Ban').val()}<<$${$('#reason4Ban').val()}`);
+              network.send(`command<<$/deletechats ${player} ${deleteLength}`);
             }
-          }))));
+          }))),
+      /*height=*/ 270);
 };
 
 function getPlayerNameArrayFromPlayerSettingsArrayObject(o) {
@@ -22262,10 +22502,11 @@ function getRankCode(text) {
       .replace(/R/g, '<img src=\'imgs/star-red.png\' style=\'margin-bottom: -2px;\' /> ');
 }
 
-function displayInfoMsg(msg) {
+function displayInfoMsg(msg, height = 230) {
   if (typeof msg === 'string') {
     msg = escapeHtml(msg);
   }
+  $('#infoWindow').height(height);
   fadeIn($('#infoWindow'));
   new HTMLBuilder()
       .add('<div class=\'infoWindowText\'>')
@@ -22992,19 +23233,19 @@ BuildingType.prototype.getTitleImage = function(player) {
 
 
 function Command(data) {
-  this.manaCost = [0];
+  this.manaCost = [ 0 ];
   this.goldCost = 0;
-  this.range = [0];
-  this.minRange = [-999];
-  this.aoeRadius = [0];
-  this.damage = [0];
-  this.projectileSpeed = [8];
+  this.range = [ 0 ];
+  this.minRange = [ -999 ];
+  this.aoeRadius = [ 0 ];
+  this.damage = [ 0 ];
+  this.projectileSpeed = [ 8 ];
   this.hitsFriendly = true;
   this.hitsEnemy = true;
   this.hitsSelf = true;
   this.effectScale = 1;
-  this.projectileAoeRadius = [0];
-  this.projectileDamage = [0];
+  this.projectileAoeRadius = [ 0 ];
+  this.projectileDamage = [ 0 ];
   this.modifiers = [];
   this.summonedUnits = [];
   this.autocastConditions = '';
@@ -23019,7 +23260,9 @@ function Command(data) {
   // copy arrays (so they dont get only referenced)
   var thisRef = this;
   _.each(data, function(val, key) {
-    thisRef[key] = Object.prototype.toString.call(thisRef[key]) === '[object Array]' ? thisRef[key].slice() : thisRef[key];
+    thisRef[key] = Object.prototype.toString.call(thisRef[key]) === '[object Array]'
+                       ? thisRef[key].slice()
+                       : thisRef[key];
   });
 
   this.isCommand = true;
@@ -23027,7 +23270,7 @@ function Command(data) {
   this.id = game.global_command_id++;
 
   if (!IS_LOGIC && this.image) {
-    this.buttons = [new Button(this)];
+    this.buttons = [ new Button(this) ];
     interface_.buttons.push(this.buttons[0]);
 
     if (this.requiredLevels && this.requiredLevels.length > 0) {
@@ -23052,14 +23295,13 @@ Command.prototype.compileCondition0 = function() {
   }
 };
 
-Command.prototype.getTitleImage = function(nr) {
-  return this.image.getTitleImage(nr);
-};
+Command.prototype.getTitleImage = function(nr) { return this.image.getTitleImage(nr); };
 
-// returns an 2 len array; 1st element: false on error, true on no error; 2nd element: error msg on error, finished language on no error
+// returns an 2 len array; 1st element: false on error, true on no error; 2nd element: error msg on
+// error, finished language on no error
 Command.prototype.compileCondition = function(str) {
   if (!str || str.length == 0) {
-    return [0, 'no content'];
+    return [ 0, 'no content' ];
   }
 
   var lastType = '';
@@ -23088,7 +23330,7 @@ Command.prototype.compileCondition = function(str) {
     } else if (char_ == ' ') {
       type_ = 'undefined';
     } else {
-      return [false, 'invalid character: ' + char_];
+      return [ false, 'invalid character: ' + char_ ];
     }
 
     if (type_ == lastType || lastType == '') {
@@ -23099,13 +23341,16 @@ Command.prototype.compileCondition = function(str) {
           var word2 = parseFloat(word);
 
           if (word2.isNaN) {
-            return [false, word2 + ' is not a number'];
+            return [ false, word2 + ' is not a number' ];
           } else {
             word = word2;
           }
         } else if (lastType == 'compare') {
-          if (word != '<' && word != '>' && word != '<=' && word != '>=' && word != '=' && word != '==' && word != '!=') {
-            return [false, word + ' is not a valid comparison expression (allowed are: < > <= >= == !=)'];
+          if (word != '<' && word != '>' && word != '<=' && word != '>=' && word != '=' &&
+              word != '==' && word != '!=') {
+            return [
+              false, word + ' is not a valid comparison expression (allowed are: < > <= >= == !=)'
+            ];
           }
 
           if (word == '=') {
@@ -23113,21 +23358,29 @@ Command.prototype.compileCondition = function(str) {
           }
         } else if (lastType == 'arithmetic') {
           if (word.length != 1) {
-            return [false, word + ' is not a valid arithmetic expression (allowed are: + - / *)'];
+            return [ false, word + ' is not a valid arithmetic expression (allowed are: + - / *)' ];
           }
         } else if (lastType == 'conjunction') {
           if (word != '&&' && word != '||') {
-            return [false, word + ' is not a valid conjunction (allowed are: && ||)'];
+            return [ false, word + ' is not a valid conjunction (allowed are: && ||)' ];
           }
         } else if (lastType == 'char') {
+          if (type_ == 'numerical') {
+            // Identifiers can end in numbers
+            word += char_;
+            type_ = 'char';
+            continue;
+          }
+
           var countDots = (word.match(/\./g) || []).length > 0;
 
           if (countDots == 1) {
-            if (word.substr(0, 5) != 'type.' && word.substr(0, 5) != 'this.' && word.substr(0, 6) != 'owner.') {
-              return [false, word + ' is not a valid field name'];
+            if (word.substr(0, 5) != 'type.' && word.substr(0, 5) != 'this.' &&
+                word.substr(0, 6) != 'owner.') {
+              return [ false, word + ' is not a valid field name' ];
             }
           } else if (countDots > 2) {
-            return [false, word + ' is not a valid field name'];
+            return [ false, word + ' is not a valid field name' ];
           }
 
           if (word != 'true' && word != 'false') {
@@ -23136,8 +23389,8 @@ Command.prototype.compileCondition = function(str) {
         }
 
         words.push({
-          word: word,
-          type: (lastType == 'char' || lastType == 'numerical') ? 'expression' : lastType,
+          word : word,
+          type : (lastType == 'char' || lastType == 'numerical') ? 'expression' : lastType,
         });
       }
 
@@ -23149,23 +23402,23 @@ Command.prototype.compileCondition = function(str) {
 
   var stateMachine = {
 
-    start: {
-      expression: 'exp1',
+    start : {
+      expression : 'exp1',
     },
 
-    exp1: {
-      arithmetic: 'start',
-      compare: 'c',
+    exp1 : {
+      arithmetic : 'start',
+      compare : 'c',
     },
 
-    c: {
-      expression: 'exp2',
+    c : {
+      expression : 'exp2',
     },
 
-    exp2: {
-      isFinish: true,
-      arithmetic: 'c',
-      conjunction: 'start',
+    exp2 : {
+      isFinish : true,
+      arithmetic : 'c',
+      conjunction : 'start',
     },
 
   };
@@ -23179,15 +23432,15 @@ Command.prototype.compileCondition = function(str) {
     if (state[words[i].type]) {
       state = stateMachine[state[words[i].type]];
     } else {
-      return [false, 'syntax error; unexpected word: ' + words[i].word];
+      return [ false, 'syntax error; unexpected word: ' + words[i].word ];
     }
   }
 
   if (!state.isFinish) {
-    return [false, 'syntax error; expecting at least one more word'];
+    return [ false, 'syntax error; expecting at least one more word' ];
   }
 
-  return [true, language];
+  return [ true, language ];
 };
 
 Command.prototype.canTargetUnit = function(u) {
@@ -23274,7 +23527,8 @@ Command.prototype.replaceReferences = function() {
   for (var i = 0; i < this.targetRequiremementsArray.length; i++) {
     for (var k = 0; k < this.targetRequiremementsArray[i].length; k++) {
       if (typeof this.targetRequiremementsArray[i][k] == 'string') {
-        this.targetRequiremementsArray[i][k] = targetRequirements[this.targetRequiremementsArray[i][k]];
+        this.targetRequiremementsArray[i][k] =
+            targetRequirements[this.targetRequiremementsArray[i][k]];
       }
     }
   }
@@ -23285,13 +23539,17 @@ Command.prototype.getValue = function(field, unit) {
     return this[field][Math.min(this[field].length - 1, unit.abilityLevels[this.id] - 1)];
   }
 
-  return ((unit.abilityLevels && (field == 'manaCost' || field == 'range' || field == 'minRange' || field == 'damage' || field == 'aoeRadius' || field == 'projectileSpeed' || field == 'projectileDamage' || field == 'projectileAoeRadius')) ?
-		this[field][Math.min(this[field].length - 1, unit.abilityLevels[this.id] - 1)] : this[field]) + (unit.owner ? unit.owner.getValueModifier(field, this) : unit.getValueModifier(field, this));
+  return ((unit.abilityLevels &&
+           (field == 'manaCost' || field == 'range' || field == 'minRange' || field == 'damage' ||
+            field == 'aoeRadius' || field == 'projectileSpeed' || field == 'projectileDamage' ||
+            field == 'projectileAoeRadius'))
+              ? this[field][Math.min(this[field].length - 1, unit.abilityLevels[this.id] - 1)]
+              : this[field]) +
+         (unit.owner ? unit.owner.getValueModifier(field, this)
+                     : unit.getValueModifier(field, this));
 };
 
-Command.prototype.getDataFields = function() {
-  return list_ability_fields;
-};
+Command.prototype.getDataFields = function() { return list_ability_fields; };
 
 Command.prototype.addToLists = function() {
   lists.types[this.id_string] = this;
@@ -24167,6 +24425,11 @@ Game.prototype.loadMap = function(data, playerSettings, aiRandomizer, replayTick
       // AMove is handled as a special case ability
       if (typeName == 'amove') {
         return;
+      }
+
+      if ('flying' in type) {
+        type.isFlying = type.flying;
+        delete type.flying;
       }
 
       if (!lists.types[typeName]) {
@@ -28316,12 +28579,13 @@ Interface.prototype.draw = function() {
     // description hover
     if (keyManager.x > unitNfoX && keyManager.y > HEIGHT - 140 && keyManager.x < unitNfoX + 150) {
       this.drawHoverBox();
-      const lines = u.type.description.split(/(?:#BR|\n)/);
+      const paragraphs = u.type.description.split(/(?:#BR|\n)/);
       const lineHeight = 18;
+      let yPos = HEIGHT - INTERFACE_HEIGHT - 270;
     
-      lines.forEach((line, index) => {
-        const yPos = HEIGHT - INTERFACE_HEIGHT - 270 + (index * (lineHeight + 4));
-        drawText(c, line, 'white', '18px LCDSolid', WIDTH - 340, yPos, 310, null, null, null, null, lineHeight);
+      paragraphs.forEach((line, index) => {
+        const linesUsed = drawText(c, line, 'white', '18px LCDSolid', WIDTH - 340, yPos, 310, null, null, null, null, lineHeight);
+        yPos += ((linesUsed + 1) * lineHeight);
       });
 
     }
@@ -29626,27 +29890,28 @@ function MapEditor(width = 64, height = 64, themeName = 'Grass', defaultHeight =
 
   const theme = getThemeByName(themeName);
   var map = {
-    name: 'unnamed',
-    x: width,
-    y: height,
-    units: [],
-    buildings: [],
-    tiles: [],
-    theme: themeName,
-    defaultTiles: theme.defaultTiles,
-    heightmap: hm,
+    name : 'unnamed',
+    x : width,
+    y : height,
+    units : [],
+    buildings : [],
+    tiles : [],
+    theme : themeName,
+    defaultTiles : theme.defaultTiles,
+    heightmap : hm,
   };
 
   game.loadMap(map, null, null, null, true);
   worker.postMessage({
-    what: 'start-game',
-    map: map,
-    network_game: false,
-    game_state: game_state,
-    networkPlayerName: networkPlayerName,
+    what : 'start-game',
+    map : map,
+    network_game : false,
+    game_state : game_state,
+    networkPlayerName : networkPlayerName,
   });
 
-  this.selectedItemType = null; // type of the selected unit / building / doodad (when clicked on a button in the interface)
+  this.selectedItemType = null; // type of the selected unit / building / doodad (when clicked on a
+                                // button in the interface)
   this.terrainModifier = 0;
   this.player = 1; // current selected player
   this.dragging = false;
@@ -29658,11 +29923,11 @@ function MapEditor(width = 64, height = 64, themeName = 'Grass', defaultHeight =
   this.randomTree = false;
 
   this.MirroringMode = Object.freeze({
-    NONE: 0,
-    DIAGONAL: 1,
-    HORIZONTAL: 2,
-    VERTICAL: 3,
-    FOURWAYS: 4,
+    NONE : 0,
+    DIAGONAL : 1,
+    HORIZONTAL : 2,
+    VERTICAL : 3,
+    FOURWAYS : 4,
   });
   this.updateMirroringMode(this.MirroringMode.NONE);
 
@@ -29674,25 +29939,26 @@ function MapEditor(width = 64, height = 64, themeName = 'Grass', defaultHeight =
 
 MapEditor.prototype.createButtons = function() {
   this.trees = {
-    fullList: [],
+    fullList : [],
     // 1_1 : []
     // 2_2 : []
     // 3_3 : []
   };
 
-  // ICONS (i could not use lists... 'lists' are empty, lists.buildingTypes for example are empty too..)
-  this.unitsIcon = game.unitTypes[0]; // soldier
+  // ICONS (i could not use lists... 'lists' are empty, lists.buildingTypes for example are empty
+  // too..)
+  this.unitsIcon = game.unitTypes[0];        // soldier
   this.buildingIcon = game.buildingTypes[4]; // house
-  this.treeIcon = tileTypes[0]; // tree 1
-  this.tileIcon = tileTypes[30]; // stone 4
-  this.decorationIcon = tileTypes[69]; // grass 22
+  this.treeIcon = tileTypes.find((t) => t.name == 'Tree 1');
+  this.tileIcon = tileTypes.find((t) => t.name == 'Stone 4');
+  this.decorationIcon = tileTypes.find((t) => t.name == 'Flower 2');
 
   // dividing tiles into blocking and non-blocking
   var blocking = [];
   var nonblocking = [];
   // building tree lists for the random trees as well
 
-  for (var i = 0; i < tileTypes.length; i ++) {
+  for (var i = 0; i < tileTypes.length; i++) {
     if (tileTypes[i].blocking && !tileTypes[i].isTree) // if its not a tree
     {
       blocking.push(tileTypes[i]);
@@ -29714,13 +29980,15 @@ MapEditor.prototype.createButtons = function() {
   }
 
   // create ui
-  var types = [game.unitTypes, game.buildingTypes, this.trees.fullList, blocking, nonblocking];
-  var typesDescription = ['Units', 'Buildings', 'Trees', 'Tiles', 'Decoration'];
-  var icons = [this.unitsIcon, this.buildingIcon, this.treeIcon, this.tileIcon, this.decorationIcon];
+  var types = [ game.unitTypes, game.buildingTypes, this.trees.fullList, blocking, nonblocking ];
+  var typesDescription = [ 'Units', 'Buildings', 'Trees', 'Tiles', 'Decoration' ];
+  var icons =
+      [ this.unitsIcon, this.buildingIcon, this.treeIcon, this.tileIcon, this.decorationIcon ];
 
   $('#typesWindow').remove();
   var typesWindows = document.createElement('div');
-  typesWindows.style.cssText = 'position: absolute; left: 10px; top: 2px; height: 64px; right: 450px;';
+  typesWindows.style.cssText =
+      'position: absolute; left: 10px; top: 2px; height: 64px; right: 450px;';
   typesWindows.id = 'typesWindow';
   $('#mapEditorInterface').append(typesWindows);
 
@@ -29729,9 +29997,10 @@ MapEditor.prototype.createButtons = function() {
     var win = document.createElement('div');
     win.id = 'mapEditorTypeButtons' + i;
     win.className = 'editorTypeClass';
-    win.style.cssText = 'position: absolute; left: 10px; top: ' + (1 * 64 + 6) + 'px; height: 128px; right: 500px; overflow: auto;';
+    win.style.cssText = 'position: absolute; left: 10px; top: ' + (1 * 64 + 6) +
+                        'px; height: 128px; right: 500px; overflow: auto;';
     $('#mapEditorInterface').append(win);
-    if (i!=0) {
+    if (i != 0) {
       $(win).hide();
     }
 
@@ -29741,7 +30010,7 @@ MapEditor.prototype.createButtons = function() {
     typeButton.id = 'editorTypeButton_' + i;
     typeButton.className = 'editorTypeButton';
     typeButton.title = typesDescription[i];
-    if (i!=0) {
+    if (i != 0) {
       $(typeButton).css('background-color', '#99cccc');
     } else {
       $(typeButton).css('background-color', '#ccffcc');
@@ -29765,7 +30034,11 @@ MapEditor.prototype.createButtons = function() {
     var x = img.x * (w2 / img.file.width);
     var y = img.y * (h2 / img.file.height);
 
-    typeButton.innerHTML = '<div style=\'width: ' + w + 'px; height: ' + h + 'px;\'><img style=\'position: absolute; left: ' + -x + 'px; top: ' + -y + 'px; width: ' + w2 + 'px; height: ' + h2 + 'px;\' src=\'' + (img.file.toDataURL ? img.file.toDataURL() : img.file.src) + '\' /></div>';
+    typeButton.innerHTML = '<div style=\'width: ' + w + 'px; height: ' + h +
+                           'px;\'><img style=\'position: absolute; left: ' + -x + 'px; top: ' + -y +
+                           'px; width: ' + w2 + 'px; height: ' + h2 + 'px;\' src=\'' +
+                           (img.file.toDataURL ? img.file.toDataURL() : img.file.src) +
+                           '\' /></div>';
     $(typesWindow).append(typeButton);
     typeButton.onclick = function() {
       $('.TabSelected').css('background-color', '#99cccc');
@@ -29774,7 +30047,7 @@ MapEditor.prototype.createButtons = function() {
       $(this).css('background-color', '#ccffcc');
       var id = this.id.split('_')[1];
       $('.editorTypeClass').hide();
-      $('#mapEditorTypeButtons'+id).show();
+      $('#mapEditorTypeButtons' + id).show();
       editor.selectedItemType = undefined;
       editor.randomTree = false;
       game.selectedUnits = [];
@@ -29782,14 +30055,18 @@ MapEditor.prototype.createButtons = function() {
     };
 
     for (var k = 0; k < types[i].length; k++) {
-      if (!types[i][k].isDefault && types[i][k].getTitleImage) // not generate buttons for default (= default ground textures), they are created randomly at map load and can not be placed manually
+      if (!types[i][k].isDefault &&
+          types[i][k]
+              .getTitleImage) // not generate buttons for default (= default ground textures), they
+                              // are created randomly at map load and can not be placed manually
       {
         var img = types[i][k].getTitleImage();
         var button = document.createElement('button');
         win.appendChild(button);
         button.id = 'editorTypeButton_' + i + '_' + k;
         button.className = 'editorTypeButton';
-        button.title = types[i][k].name + (types[i][k].description ? ' - ' + types[i][k].description : '');
+        button.title =
+            types[i][k].name + (types[i][k].description ? ' - ' + types[i][k].description : '');
         button.type_ = types[i][k];
 
         var w = img.w;
@@ -29806,7 +30083,11 @@ MapEditor.prototype.createButtons = function() {
         var h2 = img.file.height * (h / img.h);
         var x = img.x * (w2 / img.file.width);
         var y = img.y * (h2 / img.file.height);
-        button.innerHTML = '<div style=\'width: ' + w + 'px; height: ' + h + 'px;\'><img style=\'position: absolute; left: ' + -x + 'px; top: ' + -y + 'px; width: ' + w2 + 'px; height: ' + h2 + 'px;\' src=\'' + (img.file.toDataURL ? img.file.toDataURL() : img.file.src) + '\' /></div>';
+        button.innerHTML = '<div style=\'width: ' + w + 'px; height: ' + h +
+                           'px;\'><img style=\'position: absolute; left: ' + -x + 'px; top: ' + -y +
+                           'px; width: ' + w2 + 'px; height: ' + h2 + 'px;\' src=\'' +
+                           (img.file.toDataURL ? img.file.toDataURL() : img.file.src) +
+                           '\' /></div>';
 
         button.onclick = function() {
           editor.randomTree = false;
@@ -29855,7 +30136,13 @@ MapEditor.prototype.createButtons = function() {
       var h2 = img.file.height * (h / img.h);
       var x = img.x * (w2 / img.file.width);
       var y = img.y * (h2 / img.file.height);
-      button.innerHTML = '<div style=\'width: ' + w + 'px; height: ' + h + 'px;\'><img style=\'position: absolute; left: ' + -x + 'px; top: ' + -y + 'px; width: ' + w2 + 'px; height: ' + h2 + 'px;\' src=\'' + (img.file.toDataURL ? img.file.toDataURL() : img.file.src) + '\' /></div><span style=\'position: absolute; top: 0; left: 0; font-size: 16px;\'>Random ' + treeSize + 'x' + treeSize + ' tree</span>';
+      button.innerHTML =
+          '<div style=\'width: ' + w + 'px; height: ' + h +
+          'px;\'><img style=\'position: absolute; left: ' + -x + 'px; top: ' + -y +
+          'px; width: ' + w2 + 'px; height: ' + h2 + 'px;\' src=\'' +
+          (img.file.toDataURL ? img.file.toDataURL() : img.file.src) +
+          '\' /></div><span style=\'position: absolute; top: 0; left: 0; font-size: 16px;\'>Random ' +
+          treeSize + 'x' + treeSize + ' tree</span>';
 
       button.onclick = function() {
         editor.randomTree = true;
@@ -29870,7 +30157,8 @@ MapEditor.prototype.createButtons = function() {
 MapEditor.prototype.reload = function(map = game.export_(false)) {
   game = new Game();
   game.loadMap(map, null, null, null, true);
-  worker.postMessage({ what: 'start-game', editorLoad: true, game_state: GAME.EDITOR, map, players: null });
+  worker.postMessage(
+      {what : 'start-game', editorLoad : true, game_state : GAME.EDITOR, map, players : null});
 };
 
 // remove a unity/entity/tile/building (MapObject) from all context
@@ -29886,9 +30174,9 @@ MapEditor.prototype.removeObjects = function(mapObjects, saveHistory) {
       }
 
       if (u.id) {
-        units.push({ hasId: true, id: u.id });
+        units.push({hasId : true, id : u.id});
       } else {
-        units.push({ hasId: false, x: u.pos.px, y: u.pos.py, type: u.type.name });
+        units.push({hasId : false, x : u.pos.px, y : u.pos.py, type : u.type.name});
       }
 
       if (u.type.isBuilding) {
@@ -29907,13 +30195,13 @@ MapEditor.prototype.removeObjects = function(mapObjects, saveHistory) {
         u.switchBlockingTotal(false);
       }
     }
-    worker.postMessage({ what: 'deleteUnitEditor', units: units });
+    worker.postMessage({what : 'deleteUnitEditor', units : units});
   } else {
     var u = mapObjects;
     if (u.id) {
-      units.push({ hasId: true, id: u.id });
+      units.push({hasId : true, id : u.id});
     } else {
-      units.push({ hasId: false, x: u.pos.px, y: u.pos.py, type: u.type.name });
+      units.push({hasId : false, x : u.pos.px, y : u.pos.py, type : u.type.name});
     }
 
     if (u.type.isBuilding) {
@@ -29931,7 +30219,7 @@ MapEditor.prototype.removeObjects = function(mapObjects, saveHistory) {
     if ((u.type.isBuilding || u.type.isTile) && !u.type.ignoreGrid) {
       u.switchBlockingTotal(false);
     }
-    worker.postMessage({ what: 'deleteUnitEditor', units: units });
+    worker.postMessage({what : 'deleteUnitEditor', units : units});
   }
 };
 
@@ -29942,7 +30230,8 @@ MapEditor.prototype.click = function(x, y, newClick, code) {
     const mouseGameX = (x + game.cameraX) / FIELD_SIZE;
     const mouseGameY = (y + game.cameraY) / FIELD_SIZE;
     // TODO: Make field into const
-    var field = game.getFieldFromPos(mouseGameX, mouseGameY, this.terrainModifier == 0 || this.selectedItemType);
+    var field = game.getFieldFromPos(mouseGameX, mouseGameY,
+                                     this.terrainModifier == 0 || this.selectedItemType);
 
     if (code == 1) // if left click
     {
@@ -29952,21 +30241,21 @@ MapEditor.prototype.click = function(x, y, newClick, code) {
 
       let fields;
       switch (this.mirroring) {
-        case this.MirroringMode.NONE:
-          fields = [field];
-          break;
-        case this.MirroringMode.DIAGONAL:
-          fields = [field, fieldDiagonal];
-          break;
-        case this.MirroringMode.HORIZONTAL:
-          fields = [field, fieldHorizontal];
-          break;
-        case this.MirroringMode.VERTICAL:
-          fields = [field, fieldVertical];
-          break;
-        case this.MirroringMode.FOURWAYS:
-          fields = [field, fieldDiagonal, fieldHorizontal, fieldVertical];
-          break;
+      case this.MirroringMode.NONE:
+        fields = [ field ];
+        break;
+      case this.MirroringMode.DIAGONAL:
+        fields = [ field, fieldDiagonal ];
+        break;
+      case this.MirroringMode.HORIZONTAL:
+        fields = [ field, fieldHorizontal ];
+        break;
+      case this.MirroringMode.VERTICAL:
+        fields = [ field, fieldVertical ];
+        break;
+      case this.MirroringMode.FOURWAYS:
+        fields = [ field, fieldDiagonal, fieldHorizontal, fieldVertical ];
+        break;
       }
 
       // get field
@@ -29979,20 +30268,20 @@ MapEditor.prototype.click = function(x, y, newClick, code) {
 
       var tree = undefined;
       if (this.randomTree && this.selectedItemType) {
-        var listName = this.selectedItemType.sizeX+'_'+this.selectedItemType.sizeY;
-        tree = this.trees[listName][Math.floor(Math.random()*this.trees[listName].length)];
+        var listName = this.selectedItemType.sizeX + '_' + this.selectedItemType.sizeY;
+        tree = this.trees[listName][Math.floor(Math.random() * this.trees[listName].length)];
       }
 
       fields.forEach((element) => {
         var msg = {
-          what: 'editorClick',
-          x: element.px,
-          y: element.py,
-          type: this.selectedItemType ? this.selectedItemType.name : null,
-          playerIndex: this.player,
-          heightMod: this.terrainModifier,
-          startHeight: this.startHeight,
-          newClick: newClick,
+          what : 'editorClick',
+          x : element.px,
+          y : element.py,
+          type : this.selectedItemType ? this.selectedItemType.name : null,
+          playerIndex : this.player,
+          heightMod : this.terrainModifier,
+          startHeight : this.startHeight,
+          newClick : newClick,
         };
 
         if (tree) {
@@ -30003,8 +30292,10 @@ MapEditor.prototype.click = function(x, y, newClick, code) {
 
       // if we clicked on a unit, that is selected, enable dragging
       if (newClick) {
-        var clickedUnit = game.getUnitAtPosition((x + game.cameraX) / FIELD_SIZE, (y + game.cameraY) / FIELD_SIZE);
-        this.almostDragging = clickedUnit && clickedUnit.type.isUnit && game.selectedUnits.contains(clickedUnit);
+        var clickedUnit = game.getUnitAtPosition((x + game.cameraX) / FIELD_SIZE,
+                                                 (y + game.cameraY) / FIELD_SIZE);
+        this.almostDragging =
+            clickedUnit && clickedUnit.type.isUnit && game.selectedUnits.contains(clickedUnit);
         this.dragging = false;
         this.draggStartPos = new Field(x, y, true);
 
@@ -30021,14 +30312,17 @@ MapEditor.prototype.click = function(x, y, newClick, code) {
       }
 
       if (this.dragging) {
-        var offsetp = new Field((x - this.draggStartPos.x) / FIELD_SIZE, (y - this.draggStartPos.y) / FIELD_SIZE, true);
-        var offset = new Field(Math.floor((x - this.draggStartPos.x) / FIELD_SIZE), Math.floor((y - this.draggStartPos.y) / FIELD_SIZE));
+        var offsetp = new Field((x - this.draggStartPos.x) / FIELD_SIZE,
+                                (y - this.draggStartPos.y) / FIELD_SIZE, true);
+        var offset = new Field(Math.floor((x - this.draggStartPos.x) / FIELD_SIZE),
+                               Math.floor((y - this.draggStartPos.y) / FIELD_SIZE));
 
         for (var i = 0; i < game.selectedUnits.length; i++) {
           var unit = game.selectedUnits[i];
           if (unit.type.isUnit) {
-            var field = unit.type.getNextFreePositionFrom(this.draggingUnitsOriginalpositions[i].add(offsetp));
-            worker.postMessage({ what: 'changeUnitPos', x: field.px, y: field.py, id: unit.id });
+            var field = unit.type.getNextFreePositionFrom(
+                this.draggingUnitsOriginalpositions[i].add(offsetp));
+            worker.postMessage({what : 'changeUnitPos', x : field.px, y : field.py, id : unit.id});
           }
         }
       }
@@ -30043,7 +30337,7 @@ MapEditor.prototype.click = function(x, y, newClick, code) {
               u.waypoint.push(field);
             }
           } else {
-            u.waypoint = [field];
+            u.waypoint = [ field ];
           }
 
           var arr = [];
@@ -30051,7 +30345,7 @@ MapEditor.prototype.click = function(x, y, newClick, code) {
             arr.push(u.waypoint.px, u.waypoint.py);
           }
 
-          worker.postMessage({ what: 'setWP', id: game.selectedUnits[i].id, waypoint: arr });
+          worker.postMessage({what : 'setWP', id : game.selectedUnits[i].id, waypoint : arr});
         }
       }
     }
@@ -30086,33 +30380,33 @@ MapEditor.prototype.updateMirroringMode = function(mode) {
   }
 
   const mirrorButtonData = {
-    [this.MirroringMode.NONE]: {
-      image: '../play/imgs/mirror-none.png',
-      title: `Mirroring mode is not enabled
+    [this.MirroringMode.NONE] : {
+      image : '../play/imgs/mirror-none.png',
+      title : `Mirroring mode is not enabled
 
 			Click to mirror map object placement diagonally`,
     },
-    [this.MirroringMode.DIAGONAL]: {
-      image: '../play/imgs/mirror-diagonal.png',
-      title: `Mirroring diagonally
+    [this.MirroringMode.DIAGONAL] : {
+      image : '../play/imgs/mirror-diagonal.png',
+      title : `Mirroring diagonally
 
 			Click to mirror map object placement horizontally`,
     },
-    [this.MirroringMode.HORIZONTAL]: {
-      image: '../play/imgs/mirror-horizontal.png',
-      title: `Mirroring horizontally
+    [this.MirroringMode.HORIZONTAL] : {
+      image : '../play/imgs/mirror-horizontal.png',
+      title : `Mirroring horizontally
 
 			Click to mirror map object placement vertically`,
     },
-    [this.MirroringMode.VERTICAL]: {
-      image: '../play/imgs/mirror-vertical.png',
-      title: `Mirroring vertically
+    [this.MirroringMode.VERTICAL] : {
+      image : '../play/imgs/mirror-vertical.png',
+      title : `Mirroring vertically
 
 			Click to mirror map object placement four ways`,
     },
-    [this.MirroringMode.FOURWAYS]: {
-      image: '../play/imgs/mirror-4way.png',
-      title: `Mirroring four ways
+    [this.MirroringMode.FOURWAYS] : {
+      image : '../play/imgs/mirror-4way.png',
+      title : `Mirroring four ways
 
 			Click to disable map mirroring`,
     },
@@ -30125,20 +30419,33 @@ MapEditor.prototype.updateMirroringMode = function(mode) {
 
 MapEditor.prototype.keyPressed = function(key) {
   switch (key) {
-    case KEY.DELETE:
-    case KEY.BACKSPACE:
-    case KEY.E:
-      this.removeObjects(game.selectedUnits, true);
-      break;
-      // case KEY.U: this.clipboard.history.undo(); break;
-      // case KEY.Q: this.clipboard.history.debug(); break;
-    case KEY.A: killRamp(); break;
-    case KEY.S: addRamp(); break;
-    case KEY.D: higherTerrain(); break;
-    case KEY.F: lowerTerrain(); break;
-    case KEY.Q: testMap(); break;
-    case KEY.G: this.updateMirroringMode(); break;
-    default: return;
+  case KEY.DELETE:
+  case KEY.BACKSPACE:
+  case KEY.E:
+    this.removeObjects(game.selectedUnits, true);
+    break;
+    // case KEY.U: this.clipboard.history.undo(); break;
+    // case KEY.Q: this.clipboard.history.debug(); break;
+  case KEY.A:
+    killRamp();
+    break;
+  case KEY.S:
+    addRamp();
+    break;
+  case KEY.D:
+    higherTerrain();
+    break;
+  case KEY.F:
+    lowerTerrain();
+    break;
+  case KEY.Q:
+    testMap();
+    break;
+  case KEY.G:
+    this.updateMirroringMode();
+    break;
+  default:
+    return;
   }
 
   soundManager.playSound(SOUND.CLICK);
@@ -30152,41 +30459,42 @@ MapEditor.prototype.draw = function() {
 
   if (this.clipboard.copyclipboard) {
     /*
-		var selected = this.clipboard.copyclipboard.units;
-		var relativeUnit = this.clipboard.copyclipboard.relativeUnit; // this will be used to coordinates to other guys
-		var references = this.clipboard.copyclipboard.reference;
+                var selected = this.clipboard.copyclipboard.units;
+                var relativeUnit = this.clipboard.copyclipboard.relativeUnit; // this will be used
+       to coordinates to other guys var references = this.clipboard.copyclipboard.reference;
 
-		var ct = selected.length; // recursive while loop, way faster then for loops for JS. good for rendering
-		while(ct--) {
+                var ct = selected.length; // recursive while loop, way faster then for loops for JS.
+       good for rendering while(ct--) {
 
-			var thisUnit = selected[ct].type;
-			var field = thisUnit.getFieldFromMousePos();
-			var hm = game.getHMValue4(field.x, field.y);
+                        var thisUnit = selected[ct].type;
+                        var field = thisUnit.getFieldFromMousePos();
+                        var hm = game.getHMValue4(field.x, field.y);
 
-			var difX = references[ct].x;
-			var difY = references[ct].y;
-			// if its a building or a doodle
-			if(thisUnit.isBuilding || thisUnit.isTile)
-			{
-				c.globalAlpha = 0.5;
-				thisUnit.draw(thisUnit.ignoreGrid ? keyManager.x + game.cameraX : field.x, thisUnit.ignoreGrid ? keyManager.y + game.cameraY : field.y - hm * CLIFF_HEIGHT);
-				c.globalAlpha = 1;
-			// its a unit
+                        var difX = references[ct].x;
+                        var difY = references[ct].y;
+                        // if its a building or a doodle
+                        if(thisUnit.isBuilding || thisUnit.isTile)
+                        {
+                                c.globalAlpha = 0.5;
+                                thisUnit.draw(thisUnit.ignoreGrid ? keyManager.x + game.cameraX :
+       field.x, thisUnit.ignoreGrid ? keyManager.y + game.cameraY : field.y - hm * CLIFF_HEIGHT);
+                                c.globalAlpha = 1;
+                        // its a unit
 
 
-		}
-		else
-		{
-			c.globalAlpha = 0.5;
-			thisUnit.draw(keyManager.x + game.cameraX + difX, keyManager.y + game.cameraY + difY);
-			c.globalAlpha = 1;
-		}
+                }
+                else
+                {
+                        c.globalAlpha = 0.5;
+                        thisUnit.draw(keyManager.x + game.cameraX + difX, keyManager.y +
+       game.cameraY + difY); c.globalAlpha = 1;
+                }
 
-		vtester called this
-		i will remove when implemented
+                vtester called this
+                i will remove when implemented
 
-	}
-	*/
+        }
+        */
   }
   // draw current Item @ mouse pos, if we have selected a type
   else if (this.selectedItemType && keyManager.y < HEIGHT - 212) {
@@ -30197,10 +30505,14 @@ MapEditor.prototype.draw = function() {
 
       // draw
       c.globalAlpha = 0.5;
-      this.selectedItemType.draw(this.selectedItemType.ignoreGrid ? keyManager.x + game.cameraX : field.x, this.selectedItemType.ignoreGrid ? keyManager.y + game.cameraY : field.y - hm * CLIFF_HEIGHT);
+      this.selectedItemType.draw(this.selectedItemType.ignoreGrid ? keyManager.x + game.cameraX
+                                                                  : field.x,
+                                 this.selectedItemType.ignoreGrid ? keyManager.y + game.cameraY
+                                                                  : field.y - hm * CLIFF_HEIGHT);
       c.globalAlpha = 1;
 
-      // draw red box with alpha over the image when blocked, otherwise white alpha, for every grid field the building covers
+      // draw red box with alpha over the image when blocked, otherwise white alpha, for every grid
+      // field the building covers
       if (!this.selectedItemType.ignoreGrid) {
         for (x = field.x; x < field.x + this.selectedItemType.sizeX; x++) {
           for (y = field.y; y < field.y + this.selectedItemType.sizeY; y++) {
@@ -30209,16 +30521,23 @@ MapEditor.prototype.draw = function() {
             var nextGoldmine = game.getNextBuildingOfType(f, null, false, 'startGold');
             var nextCC = game.getNextBuildingOfType(f, null, false, 'takesGold');
 
-            if (this.selectedItemType.takesGold && nextGoldmine && nextGoldmine.pos.distanceTo2(f) < game.getMineDistance()) {
+            if (this.selectedItemType.takesGold && nextGoldmine &&
+                nextGoldmine.pos.distanceTo2(f) < game.getMineDistance()) {
               distanceAllowed = false;
             }
 
-            if (this.selectedItemType.startGold && nextCC && nextCC.pos.distanceTo2(f) < game.getMineDistance()) {
+            if (this.selectedItemType.startGold && nextCC &&
+                nextCC.pos.distanceTo2(f) < game.getMineDistance()) {
               distanceAllowed = false;
             }
 
-            c.fillStyle = (game.fieldIsBlockedForBuilding(f.x, f.y) || !distanceAllowed) ? 'rgba(200, 0, 0, 0.25)' : 'rgba(' + game.theme.line_red + ', ' + game.theme.line_green + ', ' + game.theme.line_blue + ', 0.3)';
-            c.fillRect((f.x - 1) * FIELD_SIZE - game.cameraX, (f.y - 1 - hm * CLIFF_HEIGHT) * FIELD_SIZE - game.cameraY, FIELD_SIZE, FIELD_SIZE);
+            c.fillStyle = (game.fieldIsBlockedForBuilding(f.x, f.y) || !distanceAllowed)
+                              ? 'rgba(200, 0, 0, 0.25)'
+                              : 'rgba(' + game.theme.line_red + ', ' + game.theme.line_green +
+                                    ', ' + game.theme.line_blue + ', 0.3)';
+            c.fillRect((f.x - 1) * FIELD_SIZE - game.cameraX,
+                       (f.y - 1 - hm * CLIFF_HEIGHT) * FIELD_SIZE - game.cameraY, FIELD_SIZE,
+                       FIELD_SIZE);
           }
         }
       }
@@ -30235,13 +30554,18 @@ MapEditor.prototype.draw = function() {
   else if (this.terrainModifier != 0) {
     var f = 'Tree 1'.toUnitType().getFieldFromMousePos();
 
-    c.fillStyle = 'rgba(' + game.theme.line_red + ', ' + game.theme.line_green + ', ' + game.theme.line_blue + ', 0.3)';
-    c.fillRect((f.x - 1) * FIELD_SIZE - game.cameraX, (f.y - 1 - game.getHMValue4(f.x, f.y) * CLIFF_HEIGHT) * FIELD_SIZE - game.cameraY, FIELD_SIZE, FIELD_SIZE);
+    c.fillStyle = 'rgba(' + game.theme.line_red + ', ' + game.theme.line_green + ', ' +
+                  game.theme.line_blue + ', 0.3)';
+    c.fillRect((f.x - 1) * FIELD_SIZE - game.cameraX,
+               (f.y - 1 - game.getHMValue4(f.x, f.y) * CLIFF_HEIGHT) * FIELD_SIZE - game.cameraY,
+               FIELD_SIZE, FIELD_SIZE);
   }
 
   // refresh mouse cursor pos display
   var field = game.getFieldFromPos();
-  $('#cursorPosDiv').html('X: ' + (Math.round(field.px * 100) / 100) + '<br />Y: ' + (Math.round((field.py - 0.2) * 100) / 100));
+  $('#cursorPosDiv')
+      .html('X: ' + (Math.round(field.px * 100) / 100) +
+            '<br />Y: ' + (Math.round((field.py - 0.2) * 100) / 100));
 };
 
 function MapEditorClipboard() {
@@ -30890,17 +31214,13 @@ Network.prototype.onmessage = function(data, flags) {
 
     Microtransactions.showSkinsDancesInfo(splitMsg[4], splitMsg[1], skinsObj, splitMsg[3]);
   } else if (splitMsg[0] == 'map-file') {
-    // TODO: this is a bit of a hack, we really should have a better messaging format
-    let mapData = '';
-    for (let i = 1; i < splitMsg.length; i++) {
-      mapData += splitMsg[i];
-      if (i != splitMsg.length - 1) {
-        mapData += '<<$';
-      }
-    }
-
-    const map = JSON.parse(Compression.decompressFromString(mapData));
-    this.onMapFile(map);
+    const url = splitMsg[1];
+    fetch(url).then(async (response) => {
+      const mapDataAB = await response.arrayBuffer();
+      const mapData = new Uint8Array(mapDataAB);
+      const map = JSON.parse(Compression.decompressFromString(mapData));
+      this.onMapFile(map);
+    });
   } else if (game_state == GAME.EDITOR) {
     if (msg == 'map-upload-init') {
       var map = game.export_();
@@ -31971,7 +32291,9 @@ const LobbyPlayerManager = (() => {
     // Find the first free player slot
     let freeSlotIndex = -1;
     for (let i = 0; i < MAX_PLAYERS; i++) {
-      if (this.playerSettings[i].slot == SlotType.OPEN && !this.slotContents[i]) {
+      if ((this.playerSettings[i].slot == SlotType.OPEN ||
+           this.playerSettings[i].slot == SlotType.COMPUTER) &&
+          !this.slotContents[i]) {
         freeSlotIndex = i;
         break;
       }
@@ -32531,25 +32853,11 @@ const ReplaysWindow = (() => {
   function ReplaysWindow_() {
     Initialization.onDocumentReady(() => this.createWindow());
 
-    if (!localStorage.getItem('Replays')) {
-      localStorage.setItem('Replays', Compression.compressToString('[]'));
+    if (!localStorage.getItem('replay_manifest')) {
+      localStorage.setItem('replay_manifest', '[]');
     }
 
-    const data = localStorage.getItem('Replays');
-    const decompressed = Compression.decompressFromString(data);
-    if (!decompressed) {
-      // The data is either in the old uncompressed JSON format or corrupted.
-      // Either way, parse it and update it to be compressed.
-      try {
-        this.replays = JSON.parse(data);
-      } catch (e) {
-        console.log(`Error loading replays: ${e}`);
-        this.replays = [];
-      }
-      this.updateLocalStorage();
-    } else {
-      this.replays = JSON.parse(decompressed);
-    }
+    this.replays = JSON.parse(localStorage.getItem('replay_manifest'));
   }
 
   ReplaysWindow_.prototype.createWindow = function() {
@@ -32559,7 +32867,8 @@ const ReplaysWindow = (() => {
 
     // Add the button to load replays from disk
     new HTMLBuilder()
-        .add('<button id=\'loadExternalReplayButton\' title=\'Load a replay from your computer\'>Load external</button>')
+        .add(
+            '<button id=\'loadExternalReplayButton\' title=\'Load a replay from your computer\'>Load external</button>')
         .addHook(() => $('#loadExternalReplayButton').click(addClickSound(() => {
           fileInput = document.createElement('input');
           fileInput.type = 'file';
@@ -32593,9 +32902,11 @@ const ReplaysWindow = (() => {
 
     for (let i = 0; i < this.replays.length; i++) {
       const replay = this.replays[i];
-      const parsed = JSON.parse(replay.replay);
+      const getReplayData = () => {
+        return Compression.decompressFromString(localStorage.getItem(`replay_${replay.id}`));
+      };
 
-      const duration = getFormattedDuration(parsed.ticksCounter * 50);
+      const duration = getFormattedDuration(replay.ticksCounter * 50);
       const watchBtnID = uniqueID();
       const saveBtnID = uniqueID();
       const deleteBtnID = uniqueID();
@@ -32610,21 +32921,22 @@ const ReplaysWindow = (() => {
 
           .add(`<button id='${watchBtnID}'>watch</button> `)
           .addHook(() => $(`#${watchBtnID}`).click(addClickSound(() => {
-            replayFile = JSON.parse(replay.replay);
+            replayFile = JSON.parse(getReplayData());
             network.send(`get-map-for-replay<<$${replayFile.map}`);
             fadeOut($('#replaysListWindow'));
           })))
 
           .add(`<button id='${saveBtnID}'>save</button> `)
           .addHook(() => $(`#${saveBtnID}`).click(addClickSound(() => {
-            const blob = new Blob([replay.replay], { type: 'text/plain;charset=utf-8' });
+            const blob = new Blob([ getReplayData() ], {type : 'text/plain;charset=utf-8'});
             saveAs(blob, replay.name + '.json');
           })))
 
           .add(`<button id='${deleteBtnID}'>X</button>`)
           .addHook(() => $(`#${deleteBtnID}`).click(addClickSound(() => {
             this.replays.remove((r) => r.id == replay.id);
-            this.updateLocalStorage();
+            localStorage.setItem('replay_manifest', JSON.stringify(this.replays));
+            localStorage.removeItem(`replay_${replay.id}`);
             this.refreshContents();
           })))
           .add('</div>')
@@ -32641,29 +32953,28 @@ const ReplaysWindow = (() => {
 
   ReplaysWindow_.prototype.saveReplay = function() {
     // Insert the replay into the beginning of the list and save
-    this.replays.unshift({
-      id: Math.floor(performance.now() * 1000),
-      name: game.getReplayName(),
-      replay: game.getReplayFile(),
-    });
-    this.updateLocalStorage();
-  };
+    const replayFile = game.getReplayFile();
+    const replay = {
+      id : Math.floor(Date.now() * 1000),
+      name : game.getReplayName(),
+      ticksCounter : JSON.parse(replayFile).ticksCounter,
+    };
+    this.replays.unshift(replay);
 
-  ReplaysWindow_.prototype.updateLocalStorage = function() {
-    // Loop while we are unable to save to localStorage and there are still old replays to remove
+    const compressed = Compression.compressToString(replayFile);
     do {
       try {
-        const raw = Compression.compressToString(JSON.stringify(this.replays));
-        localStorage.setItem('Replays', raw);
+        localStorage.setItem(`replay_${replay.id}`, compressed);
+        localStorage.setItem(`replay_manifest`, JSON.stringify(this.replays));
         return;
       } catch (e) {
         // Try removing the oldest replay
         console.log('killing replay');
-        this.replays.pop();
+        const popped = this.replays.pop();
+        localStorage.removeItem(`replay_${popped.id}`);
+        localStorage.setItem(`replay_manifest`, JSON.stringify(this.replays));
       }
     } while (this.replays.length > 0);
-
-    // Something is wrong with their browser's localStorage
   };
 
   return new ReplaysWindow_();
@@ -33674,6 +33985,8 @@ function UIManager() {
       '<p><a href=\'http://littlewargame.gamepedia.com/Little_War_Game_Wiki\' target=\'_blank\'>Wiki</a></p>';
   linksMenu2.innerHTML +=
       '<p><a href=\'https://www.youtube.com/user/LittleWarGameRTS\' target=\'_blank\'>Youtube</a></p>';
+      linksMenu2.innerHTML +=
+      '<p><a href=\'https://www.patreon.com/littlewargame\' target=\'_blank\'>Patreon</a></p>';
 
   linksMenu.domElement.appendChild(linksMenu2);
 
@@ -33924,7 +34237,7 @@ const LobbyChat = (() => {
 
   LobbyChat_.prototype.__initNetworkListeners = function() {
     const processChat = (msg, isGameLobby, isServer, sender = '', emotes = null,
-                         millis = Date.now(), id = null) => {
+                         millis = Date.now(), id = null, level = null) => {
       let insertBefore = null;
       if (id !== null) {
         if (this.__earliestChatId === null) {
@@ -33955,8 +34268,8 @@ const LobbyChat = (() => {
       }
 
       const chatWindow = $(isGameLobby ? '#lobbyGameChatTextArea' : '#lobbyChatTextArea');
-      const chatElement =
-          this.__addMessageToChatWindow(chatWindow, sender, msg, emotes, millis, insertBefore);
+      const chatElement = this.__addMessageToChatWindow(chatWindow, sender, msg, emotes, level,
+                                                        millis, insertBefore);
 
       if (id) {
         this.__chatElements[id] = chatElement;
@@ -33987,8 +34300,27 @@ const LobbyChat = (() => {
       };
       processChat(splitMsg[3], /*isGameLobby=*/ false, /*isServer=*/ false, /*sender=*/ sender,
                   /*emotes=*/ splitMsg[1], /*millis=*/ parseInt(splitMsg[8]),
-                  /*id=*/ parseInt(splitMsg[7]));
+                  /*id=*/ parseInt(splitMsg[7]), /*level=*/ parseInt(splitMsg[9]));
     });
+
+    network.registerListener(null, 'chat-chunk-end', (splitMsg) => {
+      const start = splitMsg[1];
+      const container = $('#lobbyChatTextArea')[0];
+      const hasScrollbar = container.scrollHeight > container.clientHeight;
+      if (!hasScrollbar) {
+        network.send(`request-chats<<$${start}`);
+      }
+    });
+
+    network.registerListener(null, 'delete-chats', (splitMsg) => {
+      for (let i = 1; i < splitMsg.length; ++i) {
+        const id = parseInt(splitMsg[i]);
+        if (this.__chatElements[id]) {
+          this.__chatElements[id].remove();
+        }
+      }
+    });
+
     network.registerListener(GAME.LOBBY, 'server-chat', (splitMsg) => {
       processChat(splitMsg[1], /*isGameLobby=*/ false, /*isServer=*/ true,
                   /*sender=*/ PlayersList.getDummyPlayer('Server'));
@@ -34050,9 +34382,9 @@ const LobbyChat = (() => {
   };
 
   LobbyChat_.prototype.__addMessageToChatWindow = function(
-      chatWindow, sendingPlayer, msg, emotes, millis = Date.now(), insertBefore = null) {
+      chatWindow, sendingPlayer, msg, emotes, level, millis = Date.now(), insertBefore = null) {
     const builder = new HTMLBuilder();
-    const escapedMsg = sendingPlayer.dummy ? msg : kappa(escapeHtml(msg), emotes);
+    const escapedMsg = sendingPlayer.dummy ? msg : kappa(escapeHtml(msg), emotes, level);
 
     if (escapedMsg && escapedMsg.length > 0) {
       builder.add('<p>');
@@ -34189,6 +34521,7 @@ const LobbyChat = (() => {
 <div>
   <p><span style='color: #FFFD92;'>Mod commands:</span></p>
   <p><span class='lcg_command'>[/killgame]</span> kill a running game (for example when an offensive name is used). Type '/killgame' followed by the index of the game (beginning with 0 !!!), for example '/killgame 2' would kill the 3rd game in the list. It is possible to kill multiple games at once by typing for example '/killgame 0 3 4'</p>
+  <p><span class='lcg_command'>[/deletechats &lt;player&gt; &lt;minutes&gt]</span> deletes all chats by the specified player within the specified period of time (in minutes)</p>
 `;
       if (AccountInfo.isMod2 || AccountInfo.isAdmin) {
         str +=
@@ -35054,7 +35387,8 @@ MapEditorData.prototype.getFieldHTMLCode = function(field, value, index, type) {
           `mapDataInput ${field.type == 'string' ? 'strWidth' : 'numberWidth'}`,
           val.replace ? val.replace(/'/g, '') : val,
           field.type == 'string' ? field.max_len : null,
-          field.type == 'string' ? Math.min(field.max_len * 8, 400) + 'px' : null
+          field.type == 'string' ? Math.min(field.max_len * 8, 400) + 'px' : null,
+          ID
         );
     }
     builder
@@ -35806,6 +36140,7 @@ const Chats = (() => {
         emojiPermissions: splitMsg[1],
         authLevel: splitMsg[5],
         isPremium: splitMsg[6],
+        level: splitMsg[8],
       };
       const conversationPartner = splitMsg[2];
       const msgStatus = splitMsg[4];
@@ -36041,7 +36376,7 @@ ChatWindow.prototype.addMessage = async function(rawMsg, sender, msgStatus) {
     }
 
     // Print the message itself, after cleaning it up and inserting emojis
-    const msg = rawMsg ? kappa(escapeHtml(rawMsg), sender.emojiPermissions) : '';
+    const msg = rawMsg ? kappa(escapeHtml(rawMsg), sender.emojiPermissions, sender.level) : '';
     builder.add(': ').add(msg);
 
     // If the user sent a message to an offline user, tell them the message will be delivered
@@ -36076,6 +36411,93 @@ ChatWindow.prototype.hide = function() {
 
 // Destroys the window, making this class unusable afterwards
 ChatWindow.prototype.kill = function() { this.window.remove(); };
+
+const DailyReward = (() => {
+    function DailyReward_() {
+        this.currentBuilder = null;
+        Initialization.onDocumentReady(() => {
+            Login.registerOnLogin(() => {
+                if (AccountInfo.authedAndLogged) {
+                    this.__showDailyReward();
+                }
+            });
+            
+            Login.registerOnLogout(() => {
+                this.__killDailyReward();
+            });
+        });
+    }
+
+    DailyReward_.prototype.__showDailyReward = function() {
+        const dailyRewardID = uniqueID('dailyReward');
+        
+        // First create and insert the container
+        new HTMLBuilder()
+            .add(`<span id='dailyRewardContainer'></span>`)
+            .insertInto('#faqContainer');
+        
+        const getRewardContent = () => {
+            const timeLeft = (AccountInfo.lastDailyReward + (24 * 60 * 60 * 1000)) - Date.now();
+            const hoursLeft = Math.ceil(timeLeft / (60 * 60 * 1000));
+            const isDisabled = timeLeft > 0;
+            
+            const tooltipText = isDisabled 
+                ? 'Come back later for your daily reward!' 
+                : 'Click to claim your daily reward!';
+            
+            const buttonText = isDisabled 
+                ? ` ${hoursLeft}h left ` 
+                : ' Daily reward!';
+            
+            const buttonStyle = isDisabled 
+                ? 'class="disabled" style="color: #666"' 
+                : '';
+
+            return new HTMLBuilder()
+                .add(`<span id='faqLink'>`)
+                .add(`<a class='underline' id='${dailyRewardID}' ${buttonStyle} title='${tooltipText}'>`)
+                .add(buttonText)
+                .add('</a>')
+                .add(`<button id='killDailyRewardButton'>x</button></span>`)
+                .addHook(() => {
+                    if (!isDisabled) {
+                        $(`#${dailyRewardID}`).click(addClickSound(() => {
+                            network.send('daily-reward');
+                            AccountInfo.lastDailyReward = Date.now();
+                            if (this.currentBuilder && this.currentBuilder.triggerUpdate) {
+                                this.currentBuilder.triggerUpdate();
+                            }
+                            interface_.addMessage('Daily reward claimed!', 'green');
+                            soundManager.playSound(SOUND.POSITIVE);
+                        }));
+                    }
+                    $('#killDailyRewardButton').click(addClickSound(() => {
+                        this.__killDailyReward()
+                    }));
+                });
+        };
+        // Clean up any existing builder
+        if (this.currentBuilder) {
+            this.currentBuilder = null;
+        }
+
+        // Create new builder
+        this.currentBuilder = new HTMLBuilder()
+            .addReactive(getRewardContent, 60 * 1000);
+            
+        this.currentBuilder.insertInto('#dailyRewardContainer');
+    };
+
+    
+    DailyReward_.prototype.__killDailyReward = function () {
+        if (this.currentBuilder) {
+            this.currentBuilder = null;
+        }
+        $('#dailyRewardContainer').remove();
+    }
+
+    return new DailyReward_();
+})();
 
 function Effect() {
   this.isEffect = true;
@@ -37584,7 +38006,7 @@ $(document).tooltip({
 });
 
 // version
-const version = '5.1.0';
+const version = '5.3.0';
 
 // Ladder Season
 let ladderSeasonId;
@@ -38997,6 +39419,7 @@ const Login = (() => {
     // TODO: this is insecure in the case of an XSS
     this.username = LocalConfig.registerValue('username', '');
     this.password = LocalConfig.registerValue('password', '');
+    this.hasSeenPatreonMessage = LocalConfig.registerValue('hasSeenPatreonMessage', false);
   }
 
   Login_.prototype.registerOnLogin = function(callback) { this.onLoginCallbacks.push(callback); };
@@ -39005,7 +39428,7 @@ const Login = (() => {
 
   Login_.prototype.logout = function() {
     this.onLogoutCallbacks.forEach((callback) => callback());
-    network.reset();
+    $('#loginWindowState').html('');
     this.__clearLogin();
   };
 
@@ -39244,10 +39667,10 @@ const Login = (() => {
       const code = (queryString.split('='))[1];
       network.send('recover-account-2<<$' + code);
     }
-    
+
     if (queryString.substr(0, 12) == '?inviteCode=') {
       const code = (queryString.split('='))[1];
-      function waitAndJoinGame(){
+      function waitAndJoinGame() {
         GamesList.linkInviteGame = parseInt(code);
         fadeIn($('#joinInvitePendingWindow'));
         new HTMLBuilder()
@@ -39260,7 +39683,7 @@ const Login = (() => {
 
   Login_.prototype.__instantLogin = function(forceGuest = false) {
     if (!this.__instantLoginInProgress) {
-      Initialization.addPendingResource();
+      Initialization.addPendingResource('instant-login');
     }
     this.__instantLoginInProgress = true;
 
@@ -39292,7 +39715,7 @@ const Login = (() => {
     $('#loginWindowPassword').val('');
     this.loginState = this.LoginStates.PLAYER;
 
-    Initialization.loadedPendingResource();
+    Initialization.loadedPendingResource('instant-login');
     this.__instantLoginInProgress = false;
 
     if (!hideFAQ.get()) {
@@ -39300,6 +39723,7 @@ const Login = (() => {
     }
 
     Changelog.tryShow();
+    this.__showPatreonMessage();
 
     const response = JSON.parse(splitMsg[1]);
     networkPlayerName = response.name;
@@ -39310,15 +39734,18 @@ const Login = (() => {
     AccountInfo.ignores = response.ignores;
     AccountInfo.accId = response.id;
     AccountInfo.xp = response.exp;
+    AccountInfo.level = response.level;
     AccountInfo.gold = response.gold;
     AccountInfo.league = response.league;
     AccountInfo.ladderGameCount = response.ladderGameCount;
     AccountInfo.playerName = networkPlayerName;
     AccountInfo.clan = response.clanTag;
+    AccountInfo.lastDailyReward = response.lastDailyReward
 
     if (response.agb_accepted == '0') {
       game_state = GAME.ACCEPT_AGB;
-    } else {
+    }
+    else {
       game_state = GAME.LOBBY;
     }
 
@@ -39339,7 +39766,7 @@ const Login = (() => {
   Login_.prototype.__loggedInGuestListener = function(splitMsg) {
     this.loginState = this.LoginStates.GUEST;
 
-    Initialization.loadedPendingResource();
+    Initialization.loadedPendingResource('instant-login');
     this.__instantLoginInProgress = false;
 
     if (!hideFAQ.get()) {
@@ -39347,6 +39774,7 @@ const Login = (() => {
     }
 
     Changelog.tryShow();
+    this.__showPatreonMessage();
 
     networkPlayerName = splitMsg[1];
     AccountInfo.authedAndLogged = false;
@@ -39383,6 +39811,27 @@ const Login = (() => {
       this.__dontClearSavedLogin = true;
       this.__instantLogin(true);
     }
+  };
+
+  Login_.prototype.__showPatreonMessage = function() {
+    if (this.hasSeenPatreonMessage.get())
+      return;
+
+    const patreonLinkID = uniqueID('patreon');
+
+    displayInfoMsg(
+        new HTMLBuilder()
+            .add(`<h3>Support Littlewargame Development!</h3>`)
+            .add(`<p>Littlewargame is developed by a small team of passionate developers.</p>`)
+            .add(`<p>If you enjoy the game, please consider supporting us on `)
+            .add(`<a href="https://www.patreon.com/littlewargame" id="${
+                patreonLinkID}" target="_blank" style="color: #f96854; font-weight: bold;">Patreon</a>`)
+            .add(` to help us continue improving the game.</p>`)
+            .addHook(() => $(`#${patreonLinkID}`).click(function(e) {
+              // Keep the info window open when clicking the link
+              e.stopPropagation();
+            })));
+    this.hasSeenPatreonMessage.set(true);
   };
 
   // Log in as a user, optionally forcing old sessions to close
@@ -40640,6 +41089,14 @@ const Microtransactions = (() => {
     uimanager.playerInfoWindow.setRider(new HTMLBuilder());
   }
 
+  function achievementIsUnlocked(achievement, achievementBin, AccountLevel) {
+    const isFree = achievement.free === true;
+    const dbPosIsValid = achievement.dbPos && achievement.dbPos <= achievementBin.length
+    const isUnlockedInDB = dbPosIsValid ? achievementBin.substr(achievementBin.length - achievement.dbPos, 1) === '1' : false;
+    const levelRequirementMet = achievement.playerLvl && (achievement.playerLvl  <= AccountLevel);
+    return isFree || isUnlockedInDB || levelRequirementMet;
+  }
+
   function showEmotesInfo(emotesHex32, playerID) {
     const playerGold = AccountInfo.gold;
     const emotesBin = hex32ToBin(emotesHex32);
@@ -40651,10 +41108,7 @@ const Microtransactions = (() => {
     const emotesToShow =  emotes.concat(_emotes2)
 
     for (let i = 0; i < emotesToShow.length; i++) {
-      const isUnlocked =
-          emotesToShow[i].free || (emotesToShow[i].dbPos && emotesToShow[i].dbPos <= emotesBin.length &&
-                             emotesBin.substr(emotesBin.length - emotesToShow[i].dbPos, 1) == '1');
-
+      const isUnlocked = achievementIsUnlocked(emotesToShow[i], emotesBin, AccountInfo.level)
       const isHidden = !isUnlocked && emotesToShow[i].hidd 
       let title = '';
 
@@ -40807,8 +41261,7 @@ const Microtransactions = (() => {
         // Add custom skins
         for (let i = 0; i < matchingSkins.length; i++) {
           const skin = matchingSkins[i];
-          const isUnlocked = skin.free || (skin.dbPos && skin.dbPos <= skinsBin.length &&
-                                           skinsBin.substr(skinsBin.length - skin.dbPos, 1) == '1');
+          const isUnlocked = achievementIsUnlocked(skin, skinsBin, AccountInfo.level)
 
           addSkin(unit_imgs[skin.img], isUnlocked, skinNumber++, skin, skin.author);
         }
@@ -40836,10 +41289,7 @@ const Microtransactions = (() => {
 
         for (let i = 0; i < matchingDances.length; i++) {
           const dance = matchingDances[i];
-          const isUnlocked =
-              dance.free || (dance.dbPos && dance.dbPos <= dancesBin.length &&
-                             dancesBin.substr(dancesBin.length - dance.dbPos, 1) == '1');
-
+          const isUnlocked = achievementIsUnlocked(dance, dancesBin, AccountInfo.level)
           const img = unit_imgs[basicUnitTypes[k].img][dance.animName];
           const file = unit_imgs[basicUnitTypes[k].img].file[1];
 
