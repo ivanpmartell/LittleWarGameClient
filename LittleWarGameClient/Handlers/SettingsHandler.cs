@@ -9,7 +9,14 @@ namespace LittleWarGameClient.Handlers
         private const OverlayType defaultOverlayType = OverlayType.OpenGL;
         private const int defaultWidth = 1280;
         private const int defaultHeight = 720;
-        private const bool defaultInjectJS = false;
+        private const int defaultLoadingImageWidth = 200;
+        private const int defaultLoadingImageHeight = 200;
+        private const int defaultLoadingImageLocationLeft = 532;
+        private const int defaultLoadingImageLocationTop = 70;
+        private const string defaultLoadingImagePath = "";
+        private const string defaultPluginRepoReleaseVersion = "0.0.0";
+        private const bool defaultDebugMode = false;
+        private const bool defaultDisableAllPlugins = false;
         private const bool defaultFullscreen = false;
         private const bool defaultMouseLock = false;
         private const int defaultUpdateInterval = 1;
@@ -22,7 +29,7 @@ namespace LittleWarGameClient.Handlers
         private readonly Ini settings;
         private readonly SettingsHelper helper;
 
-        public SettingsHandler()
+        internal SettingsHandler()
         {
             var settingsDirectory = "settings";
             if (!Directory.Exists(settingsDirectory))
@@ -49,7 +56,12 @@ namespace LittleWarGameClient.Handlers
             SetChatHistoryMenuHotkey(GetChatHistoryMenuHotkey());
             SetFullscreenHotkey(GetFullscreenHotkey());
             SetVolume(GetVolume());
-            SetInjectJS(GetInjectJS());
+            SetLoadingImagePath(GetLoadingImagePath());
+            SetLoadingImageLocation(GetLoadingImageLocation());
+            SetLoadingImageSize(GetLoadingImageSize());
+            SetDisableAllPlugins(GetDisableAllPlugins());
+            SetDebugMode(GetDebugMode());
+            SetPluginRepoReleaseVersion(GetPluginRepoReleaseVersion());
             await SaveAsync();
         }
 
@@ -203,14 +215,70 @@ namespace LittleWarGameClient.Handlers
             return helper.GetVariable("Audio", "volume", defaultVolume);
         }
 
-        internal void SetInjectJS(bool value)
+        internal void SetDisableAllPlugins(bool value)
         {
-            helper.SetVariable("JS", "inject", value);
+            helper.SetVariable("Plugins", "disable", value);
         }
 
-        public bool GetInjectJS()
+        public bool GetDisableAllPlugins()
         {
-            return helper.GetVariable("JS", "inject", defaultInjectJS);
+            return helper.GetVariable("Plugins", "disable", defaultDisableAllPlugins);
+        }
+
+        internal void SetDebugMode(bool value)
+        {
+            helper.SetVariable("Plugins", "debug", value);
+        }
+
+        public bool GetDebugMode()
+        {
+            return helper.GetVariable("Plugins", "debug", defaultDebugMode);
+        }
+
+        internal void SetPluginRepoReleaseVersion(Version value)
+        {
+            helper.SetVariable("Plugins", "release", value);
+        }
+
+        public Version GetPluginRepoReleaseVersion()
+        {
+            return helper.GetVariable("Plugins", "release", new Version(defaultPluginRepoReleaseVersion));
+        }
+
+        internal void SetLoadingImageLocation(Point value)
+        {
+            helper.SetVariable("Loader", "image_x", value.X);
+            helper.SetVariable("Loader", "image_y", value.Y);
+        }
+
+        public Point GetLoadingImageLocation()
+        {
+            int left = helper.GetVariable("Loader", "image_x", defaultLoadingImageLocationLeft);
+            int top = helper.GetVariable("Loader", "image_y", defaultLoadingImageLocationTop);
+            return new Point(left, top);
+        }
+
+        internal void SetLoadingImageSize(Size value)
+        {
+            helper.SetVariable("Loader", "image_width", value.Width);
+            helper.SetVariable("Loader", "image_height", value.Height);
+        }
+
+        public Size GetLoadingImageSize()
+        {
+            int width = helper.GetVariable("Loader", "image_width", defaultLoadingImageWidth);
+            int height = helper.GetVariable("Loader", "image_height", defaultLoadingImageHeight);
+            return new Size(width, height);
+        }
+
+        internal void SetLoadingImagePath(string value)
+        {
+            helper.SetVariable("Loader", "image_path", value);
+        }
+
+        public string GetLoadingImagePath()
+        {
+            return helper.GetVariable("Loader", "image_path", defaultLoadingImagePath);
         }
     }
 

@@ -9,10 +9,12 @@ namespace LittleWarGameClient.Handlers
     {
         private readonly Dictionary<Keys, MethodInfo?> hotKeys = new Dictionary<Keys, MethodInfo?>();
         internal bool hasHangingAltKey = false;
+        private readonly bool debugMode;
 
         internal KeyboardHandler(SettingsHandler settings)
         {
             InitHotkeys(settings);
+            debugMode = settings.GetDebugMode();
         }
 
         private void InitHotkeys(SettingsHandler settings)
@@ -55,6 +57,7 @@ namespace LittleWarGameClient.Handlers
             }
         }
 
+        //Keep HotkeyFunc functions non-static to avoid removal from compiler optimization 
         private void FullscreenHotkeyFunc(ChromiumWebBrowser sender)
         {
             GameForm.Instance.InvokeUI(() =>
@@ -91,6 +94,11 @@ namespace LittleWarGameClient.Handlers
             }
             if (type == KeyType.RawKeyDown)
             {
+                if (debugMode && key == Keys.F12)
+                {
+                    webView.ShowDevTools();
+                    return true;
+                }
 #if DEBUG
                 if (key == Keys.F12)
                 {

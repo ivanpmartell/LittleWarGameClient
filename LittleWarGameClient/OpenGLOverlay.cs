@@ -4,7 +4,6 @@ using Steamworks;
 using SharpGL;
 using Loyc;
 using LittleWarGameClient.Helpers;
-using System.Windows.Forms;
 
 namespace LittleWarGameClient
 {
@@ -27,7 +26,13 @@ namespace LittleWarGameClient
             InitializeComponent();
             try
             {
-                SteamClient.Init(480);
+                string appidFile = "steam_appid.txt";
+                if (!System.IO.File.Exists(appidFile))
+                    SteamClient.Init(480);
+                else
+                {
+                    SteamClient.Init(uint.Parse(IOHelper.ReadFirstLine(appidFile)));
+                }
                 SteamScreenshots.Hooked = true;
                 SteamScreenshots.OnScreenshotRequested += OnScreenShotRequested;
                 SteamFriends.OnGameOverlayActivated += OnGameOverlayActivated;

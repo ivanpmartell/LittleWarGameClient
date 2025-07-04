@@ -1,0 +1,27 @@
+# Necessary fields (name, description, version)
+Version:: 0.1
+Name:: Sample
+Description::
+This is an example of a plugin
+It changes the loading image
+
+# Loading image location (always set together)
+Image_x:: 532
+Image_y:: 70
+
+# Loading image size (always set together)
+Image_width:: 200
+Image_height:: 200
+
+# Loading image relative path
+Image:: plugin.png
+
+# Scripts to load
+Scripts::
+sample.js
+#Add more scripts (one in each new line)
+
+# Modify game script
+# This substitutes the game script.
+# Only enable this if you know what you are doing.
+#GameScript:: lwg.js

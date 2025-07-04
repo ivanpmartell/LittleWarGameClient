@@ -6,6 +6,11 @@ namespace LittleWarGameClient.Interceptors
 {
     internal class RequestInterceptor : RequestHandler
     {
+        private readonly string overridingFile;
+        internal RequestInterceptor(string overridingFile)
+        {
+            this.overridingFile = overridingFile;
+        }
         protected override IResourceRequestHandler? GetResourceRequestHandler(IWebBrowser chromiumWebBrowser, IBrowser browser, IFrame frame, IRequest request, bool isNavigation, bool isDownload, string requestInitiator, ref bool disableDefaultHandling)
         {
             if (!request.Url.EndsWith(".js"))
@@ -14,7 +19,7 @@ namespace LittleWarGameClient.Interceptors
             Match match = Regex.Match(request.Url, gameplayCodePathRegex);
             if (match.Success)
             {
-                return new OverrideJavascript();
+                return new OverrideJavascript(overridingFile);
             }
             //Default behaviour, url will be loaded normally.
             return null;
@@ -29,9 +34,14 @@ namespace LittleWarGameClient.Interceptors
 
     internal class OverrideJavascript : ResourceRequestHandler
     {
+        private readonly string localFile;
+        internal OverrideJavascript(string localFile)
+        {
+            this.localFile = localFile;
+        }
         protected override IResourceHandler GetResourceHandler(IWebBrowser chromiumWebBrowser, IBrowser browser, IFrame frame, IRequest request)
         {
-            FileStream fs = File.Open("js/lwg.js", FileMode.Open);
+            FileStream fs = File.Open(localFile, FileMode.Open);
             return ResourceHandler.FromStream(fs, mimeType: Cef.GetMimeType("js"), true);
         }
     }

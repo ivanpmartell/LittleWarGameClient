@@ -63,13 +63,6 @@ namespace LittleWarGameClient.Helpers
                             GameForm.Instance.VolumeChangePostLogic(float.Parse(msg.Value));
                         }
                         break;
-                    case ButtonType.InjectJS:
-                        if (msg.Value != null)
-                            GameForm.Instance.InvokeUI(() =>
-                            {
-                                GameForm.Instance.InjectJS(bool.Parse(msg.Value));
-                            });
-                        break;
                     case ButtonType.OverlayType:
                         if (msg.Value != null)
                             GameForm.Instance.InvokeUI(() =>
@@ -82,6 +75,60 @@ namespace LittleWarGameClient.Helpers
                         {
                             GameForm.Instance.ReloadGame();
                         });
+                        break;
+                    case ButtonType.EnablePlugin:
+                        if (msg.Value != null)
+                            GameForm.Instance.InvokeUI(() =>
+                            {
+                                GameForm.Instance.EnablePlugin(msg.Value);
+                            });
+                        break;
+                    case ButtonType.DisablePlugin:
+                        if (msg.Value != null)
+                            GameForm.Instance.InvokeUI(() =>
+                            {
+                                GameForm.Instance.DisablePlugin(msg.Value);
+                            });
+                        break;
+                    case ButtonType.InstallPlugin:
+                        if (msg.Value != null)
+                            GameForm.Instance.InvokeUI(() =>
+                            {
+                                GameForm.Instance.InstallPlugin(msg.Value);
+                            });
+                        break;
+                    case ButtonType.UninstallPlugin:
+                        if (msg.Value != null)
+                            GameForm.Instance.InvokeUI(() =>
+                            {
+                                GameForm.Instance.UninstallPlugin(msg.Value);
+                            });
+                        break;
+                    case ButtonType.UpdatePlugin:
+                        if (msg.Value != null)
+                            GameForm.Instance.InvokeUI(() =>
+                            {
+                                GameForm.Instance.UpdatePlugin(msg.Value);
+                            });
+                        break;
+                    case ButtonType.BrowseAvailablePlugins:
+                        GameForm.Instance.InvokeUI(() =>
+                        {
+                            GameForm.Instance.SendAvailablePlugins();
+                        });
+                        break;
+                    case ButtonType.ViewInstalledPlugins:
+                        GameForm.Instance.InvokeUI(() =>
+                        {
+                            GameForm.Instance.SendInstalledPluginsAndLatestVersions();
+                        });
+                        break;
+                    case ButtonType.DisableAllPlugins:
+                        if (msg.Value != null)
+                            GameForm.Instance.InvokeUI(() =>
+                            {
+                                GameForm.Instance.DisableAllPlugins(bool.Parse(msg.Value));
+                            });
                         break;
                 }
             }
@@ -96,8 +143,15 @@ namespace LittleWarGameClient.Helpers
         InitComplete,
         VolumeChanging,
         VolumeChanged,
-        InjectJS,
         OverlayType,
-        Reload
+        Reload,
+        InstallPlugin,
+        UninstallPlugin,
+        EnablePlugin,
+        DisablePlugin,
+        UpdatePlugin,
+        BrowseAvailablePlugins,
+        ViewInstalledPlugins,
+        DisableAllPlugins
     }
 }

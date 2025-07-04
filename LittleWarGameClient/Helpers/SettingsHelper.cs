@@ -4,8 +4,8 @@ namespace LittleWarGameClient.Helpers
 {
     internal class SettingsHelper
     {
-        readonly Ini settings;
-        public SettingsHelper(Ini s)
+        private readonly Ini settings;
+        internal SettingsHelper(Ini s)
         {
             settings = s;
         }
@@ -75,11 +75,35 @@ namespace LittleWarGameClient.Helpers
             }
         }
 
+        internal string GetVariable(string sectionName, string propertyName, string defaultValue)
+        {
+            try
+            {
+                return settings[sectionName][propertyName];
+            }
+            catch
+            {
+                return defaultValue;
+            }
+        }
+
         internal DateTime GetVariable(string sectionName, string propertyName, DateTime defaultValue)
         {
             try
             {
                 return settings[sectionName][propertyName];
+            }
+            catch
+            {
+                return defaultValue;
+            }
+        }
+
+        internal Version GetVariable(string sectionName, string propertyName, Version defaultValue)
+        {
+            try
+            {
+                return new Version(settings[sectionName][propertyName]);
             }
             catch
             {
@@ -150,6 +174,19 @@ namespace LittleWarGameClient.Helpers
             }
         }
 
+        internal void SetVariable(string sectionName, string propertyName, string value)
+        {
+            Section section = EnsureSection(sectionName);
+            try
+            {
+                section[propertyName] = value;
+            }
+            catch
+            {
+                section.Add(new Property(propertyName, value));
+            }
+        }
+
         internal void SetVariable(string sectionName, string propertyName, Keys value)
         {
             Section section = EnsureSection(sectionName);
@@ -164,6 +201,19 @@ namespace LittleWarGameClient.Helpers
         }
 
         internal void SetVariable(string sectionName, string propertyName, OverlayType value)
+        {
+            Section section = EnsureSection(sectionName);
+            try
+            {
+                section[propertyName] = value.ToString();
+            }
+            catch
+            {
+                section.Add(new Property(propertyName, value.ToString()));
+            }
+        }
+
+        internal void SetVariable(string sectionName, string propertyName, Version value)
         {
             Section section = EnsureSection(sectionName);
             try

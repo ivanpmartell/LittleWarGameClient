@@ -4,13 +4,13 @@ It contains additional improvements to the web-based client such as borderless w
 
 The client also supports the Steam overlay, as well as multiple profiles.
 
-This project is completely open source. Feel free to fork and make pull requests, additionally please report any issues [here](https://github.com/ivanpmartell/LittleWarGameClient/issues).
+This project is completely open source. Feel free to fork and make pull requests, additionally please report any issues or bugs [here](https://github.com/ivanpmartell/LittleWarGameClient/issues).
 
 ## Important
 
-If updating from versions below 0.6.3:
+If updating from versions below 0.8.0:
 
-Versions 0.6.3+ are not compatible with previous versions. The libraries required to run the program have been updated and a full update is needed.
+Versions 0.8.0+ are not compatible with previous versions. The libraries required to run the program have been updated and a full update is needed.
 Download the complete package from below, and replace your previous files with the updated files. Do not use update_64/86.zip file to update.
 The data and settings folder can be kept so as to not lose any of your previous configurations, e.g. downloaded replays or login cookies.
 
@@ -32,9 +32,10 @@ This will also let you run multiple instance of the game at the same time. The d
 
 ## Overlays
 
-Overlays are turned off by default. You can select an OpenGL or Direct2D overlay to allow steam overlay integration.
+The OpenGL overlay is enabled by default. You can change the overlay to use Direct2D, or turn the overlay completely.
+The overlay allows steam overlay integration, as well as notifications, e.g. Download progress of replays.
 
-## Code Injection
+## Plugin Support
 
-Javascript can be replaced to allow for custom functionality. Please note that if the game server is updated, your custom functionality might not work.
-In that case please update the ```js/lwg.js``` file to handle the server update.
+Plugin support has been added to enable custom Javascript functionality for the game. Please note that if the game server is updated, your custom functionality might stop working.
+If you are a developer of a plugin, please update the plugin and send a pull request to the [LittleWarGame Plugins Repository](https://github.com/ivanpmartell/LittleWarGamePlugins/).

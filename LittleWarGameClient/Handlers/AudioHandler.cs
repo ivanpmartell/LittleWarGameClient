@@ -11,7 +11,7 @@ namespace LittleWarGameClient.Handlers
         private AudioSessionControl? currentSession = null;
         private readonly string formTitle;
 
-        public AudioHandler(string formTitle)
+        internal AudioHandler(string formTitle)
         {
             this.formTitle = formTitle;
             try {
@@ -31,7 +31,7 @@ namespace LittleWarGameClient.Handlers
             catch (Exception) {
                 mainDevice = null;
                 currentSession = null;
-                MessageBox.Show("Could not connect to audio interfaces. Global client audio will not function correctly.", "Error", MessageBoxButtons.OK);
+                MessageBox.Show("Could not connect to audio interfaces. Global client audio will not function correctly.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error, MessageBoxDefaultButton.Button1, MessageBoxOptions.DefaultDesktopOnly);
             }
         }
 

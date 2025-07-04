@@ -3,9 +3,8 @@ using CefSharp.WinForms;
 using LittleWarGameClient.Handlers;
 using LittleWarGameClient.Helpers;
 using LittleWarGameClient.Interceptors;
-using Loyc.Collections;
-using System.Security.Cryptography;
-using System;
+using System.Text;
+using System.Text.Json;
 
 namespace LittleWarGameClient
 {
@@ -26,10 +25,12 @@ namespace LittleWarGameClient
 #pragma warning restore CS8618
 
         internal const string baseUrl = @"https://littlewargame.com/play";
-        private readonly SettingsHandler settings = new SettingsHandler();
+        private readonly List<string> enabledPluginScripts = new();
+        private readonly SettingsHandler settings = new();
         private readonly KeyboardHandler kbHandler;
         private readonly VersionHandler versionHandler;
         private readonly AudioHandler audioHandler;
+        private readonly PluginHandler pluginHandler;
         private FormWindowState PreviousWindowState;
 
         internal int requestCallCounter = 0;
@@ -37,6 +38,7 @@ namespace LittleWarGameClient
         private bool wasSmallWindow = false;
         private bool gameHasLoaded = false;
         private bool mouseLocked;
+        
 
         internal bool isOverlayActivated = false;
 
@@ -44,41 +46,94 @@ namespace LittleWarGameClient
         {
             if (InstanceName == null)
                 throw new MissingFieldException(nameof(InstanceName));
-            PreInitWeb();
+            string exeDirectory = Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath)!;
+            PreInitWeb(exeDirectory);
             InitializeComponent();
             Text = $"Littlewargame({InstanceName})";
-            loadingText.Font = FontHandler.gameFont(48F);
+            InitLoadingScreen();
             audioHandler = new AudioHandler(Text);
             kbHandler = new KeyboardHandler(settings);
             versionHandler = new VersionHandler(settings);
+            pluginHandler = new PluginHandler(exeDirectory, settings);
             InitScreen();
-            InitWebView(settings);
+            InitWebView();
         }
 
-        private void PreInitWeb()
+        private void InitLoadingScreen()
         {
-            var path = Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath);
+            loadingText.Font = FontHandler.gameFont(48F);
+            loadingPanel.SetDoubleBuffered();
+            loadingPanel.BringToFront();
+        }
+
+        private void PreInitWeb(string? exeDirectory)
+        {
             var cefSettings = new CefSettings();
             cefSettings.CefCommandLineArgs.Add("no-proxy-server", "1");
             cefSettings.CefCommandLineArgs.Add("disable-plugins-discovery", "1");
             cefSettings.CefCommandLineArgs.Add("disable-extensions", "1");
-            cefSettings.RootCachePath = Path.Join(path, "data", InstanceName);
+            cefSettings.RootCachePath = Path.Join(exeDirectory, "data", InstanceName);
             Cef.Initialize(cefSettings);
         }
 
-        private void InitWebView(SettingsHandler settings)
+        private void InitPlugins()
         {
-            webBrowser.JavascriptMessageReceived += ElementMessage.JSMessageReceived;
-            webBrowser.KeyboardHandler = kbHandler;
-            webBrowser.MenuHandler = new ContextMenuInterceptor();
-            webBrowser.DownloadHandler = new DownloadInterceptor();
-            if (settings.GetInjectJS())
-                webBrowser.RequestHandler = new RequestInterceptor();
-            else
-                webBrowser.RequestHandler = new DefaultRequestInterceptor();
-            webBrowser.LoadUrl(baseUrl);
-            loadingPanel.SetDoubleBuffered();
-            loadingPanel.BringToFront();
+            if (!settings.GetDisableAllPlugins())
+            {
+                foreach (var (pluginId, plugin) in pluginHandler.GetInstalledPlugins())
+                {
+                    if (plugin.Enabled)
+                    {
+                        LoadPlugin(pluginId);
+                    }
+                }
+            }
+        }
+
+        private void InitPluginsGameScript()
+        {
+            if (!settings.GetDisableAllPlugins())
+            {
+                pluginHandler.SynchronizeWithLocalPlugins();
+                enabledPluginScripts.Clear();
+                foreach (var (pluginId, plugin) in pluginHandler.GetInstalledPlugins())
+                {
+                    if (plugin.Enabled)
+                    {
+                        if (plugin.GameScript != null)
+                        {
+                            string gameScriptPath = Path.Combine(plugin.AbsolutePluginPath!, plugin.GameScript);
+                            if (File.Exists(gameScriptPath))
+                                webBrowser.RequestHandler = new RequestInterceptor(gameScriptPath);
+                        }
+                        else
+                            webBrowser.RequestHandler = new DefaultRequestInterceptor();
+                    }
+                }
+            }
+        }
+
+        private void LoadPlugin(string pluginId)
+        {
+            Plugin plugin = pluginHandler.GetInstalledPlugins()[pluginId];
+            if (plugin.Image != null)
+            {
+                var imagePath = Path.Combine(plugin.AbsolutePluginPath!, plugin.Image);
+                mainImage.LoadAsync(imagePath);
+            }
+            if (plugin.ImageLocation != null)
+            {
+                mainImage.Location = (Point)plugin.ImageLocation;
+            }
+            if (plugin.ImageSize != null)
+            {
+                mainImage.Size = (Size)plugin.ImageSize;
+            }
+            foreach (string script in plugin.Scripts)
+            {
+                var scriptPath = Path.Combine(plugin.AbsolutePluginPath!, script);
+                enabledPluginScripts.Add(scriptPath);
+            }
         }
 
         private void InitScreen()
@@ -90,6 +145,16 @@ namespace LittleWarGameClient
                 EnterFullscreen();
             else
                 LeaveFullscreen();
+        }
+
+        private void InitWebView()
+        {
+            webBrowser.JavascriptMessageReceived += ElementMessage.JSMessageReceived;
+            webBrowser.KeyboardHandler = kbHandler;
+            webBrowser.MenuHandler = new ContextMenuInterceptor();
+            webBrowser.DownloadHandler = new DownloadInterceptor();
+            webBrowser.RequestHandler = new DefaultRequestInterceptor();
+            webBrowser.LoadUrl(baseUrl);
         }
 
         internal async void OverlayChanged(int overlayChoice)
@@ -117,16 +182,109 @@ namespace LittleWarGameClient
             }
         }
 
-        internal async void InjectJS(bool choice)
+        internal void EnablePlugin(string pluginId)
         {
-            if (choice)
-                webBrowser.RequestHandler = new RequestInterceptor();
-            else
-                webBrowser.RequestHandler = new DefaultRequestInterceptor();
-            settings.SetInjectJS(choice);
-            await settings.SaveAsync();
-            if (DialogResult.OK == MessageBox.Show("Injecting additional gameplay functionality requires reloading the game. Reload now?", "Update", MessageBoxButtons.OKCancel))
+            Plugin plugin = pluginHandler.GetInstalledPlugins()[pluginId];
+            bool requiresRefresh = false;
+            if (plugin.ModifiesGameScript())
+            {
+                var conflictingPlugins = pluginHandler.GetEnabledPluginIdsThatModifyGameScript();
+                if (!ContinueWithConflictingPlugins(plugin, conflictingPlugins, "game script"))
+                    return;
+                DisablePlugins(conflictingPlugins);
+                requiresRefresh = true;
+            }
+
+            if (plugin.ModifiesLoadingImage())
+            {
+                var conflictingPlugins = pluginHandler.GetEnabledPluginIdsThatModifyLoadingImage();
+                if (!ContinueWithConflictingPlugins(plugin, conflictingPlugins, "loading image"))
+                    return;
+                DisablePlugins(conflictingPlugins);
+                requiresRefresh = true;
+            }
+
+            pluginHandler.EnableAPlugin(pluginId);
+            if (requiresRefresh)
+                RefreshInstalledPluginsTabContents();
+            if (DialogResult.OK == MessageBox.Show("Enabling a plugin requires reloading the game. Reload now?", "Warning", MessageBoxButtons.OKCancel))
                 ReloadGame();
+        }
+
+        internal void DisablePlugin(string pluginId)
+        {
+            if (!pluginHandler.GetInstalledPlugins()[pluginId].Enabled)
+                return;
+            pluginHandler.DisableAPlugin(pluginId);
+            if (DialogResult.OK == MessageBox.Show("Disabling a plugin requires reloading the game. Reload now?", "Warning", MessageBoxButtons.OKCancel))
+                ReloadGame();
+        }
+
+        private void RefreshInstalledPluginsTabContents()
+        {
+            ElementMessage.CallJSFunc(webBrowser, "clearInstalledPluginsTabContents");
+            SendInstalledPluginsAndLatestVersions();
+        }
+
+        private void RefreshAvailablePluginsTabContents()
+        {
+            ElementMessage.CallJSFunc(webBrowser, "clearAvailablePluginsTabContents");
+            SendAvailablePlugins();
+        }
+
+        internal void InstallPlugin(string pluginId)
+        {
+            if (pluginHandler.InstallOrUpdateAPlugin(pluginId))
+            {
+                RefreshAvailablePluginsTabContents();
+                MessageBox.Show("Plugin was successfully installed", "Success", MessageBoxButtons.OK);
+            }
+            else
+            {
+                MessageBox.Show("There was an error installing the plugin", "Error", MessageBoxButtons.OK);
+            }
+        }
+
+        internal void UninstallPlugin(string pluginId)
+        {
+            pluginHandler.UninstallAPlugin(pluginId);
+            RefreshInstalledPluginsTabContents();
+            MessageBox.Show("Plugin was successfully uninstalled", "Success", MessageBoxButtons.OK);
+        }
+
+        internal void UpdatePlugin(string pluginId)
+        {
+            if (pluginHandler.InstallOrUpdateAPlugin(pluginId))
+            {
+                RefreshInstalledPluginsTabContents();
+                MessageBox.Show("Plugin was successfully updated", "Success", MessageBoxButtons.OK);
+            }
+            else
+            {
+                MessageBox.Show("There was an error updating the plugin", "Error", MessageBoxButtons.OK);
+            }
+        }
+
+        private bool ContinueWithConflictingPlugins(Plugin plugin, List<string> conflictingPlugins, string conflictReason)
+        {
+            if (conflictingPlugins.Count > 0)
+            {
+                string conflictingPluginNames = "";
+                foreach (string conflictingPlugin in conflictingPlugins)
+                    conflictingPluginNames += "\n\t" + pluginHandler.GetInstalledPlugins()[conflictingPlugin].Name;
+                if (DialogResult.Cancel == MessageBox.Show($"The following plugins also modify the {conflictReason} and will conflict with this plugin:{conflictingPluginNames}\nIf you continue, they will be disabled.\nContinue?", "Warning", MessageBoxButtons.OKCancel))
+                {
+                    ElementMessage.CallJSFunc(webBrowser, "cancelledEnablePlugin", $"\"{plugin.Folder}\"");
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        private void DisablePlugins(List<string> conflictingPlugins)
+        {
+            foreach (string conflictingPlugin in conflictingPlugins)
+                pluginHandler.DisableAPlugin(conflictingPlugin);
         }
 
         internal async void ToggleFullscreen()
@@ -166,6 +324,13 @@ namespace LittleWarGameClient
         internal void ReloadGame()
         {
             webBrowser.Reload(true);
+        }
+
+        internal void DisableAllPlugins(bool option)
+        {
+            settings.SetDisableAllPlugins(option);
+            if (DialogResult.OK == MessageBox.Show("Disabling the client's plugin functionality requires reloading the game. Reload now?", "Warning", MessageBoxButtons.OKCancel))
+                ReloadGame();
         }
 
         private void CaptureCursor()
@@ -317,6 +482,7 @@ namespace LittleWarGameClient
                     break;
                 case CloseReason.UserClosing:
                     audioHandler.DestroySession();
+                    webBrowser.CloseDevTools();
                     webBrowser.Dispose();
                     Application.Exit();
                     break;
@@ -359,6 +525,14 @@ namespace LittleWarGameClient
         {
             gameHasLoaded = true;
             ForceResizeGameWindows();
+            if (!settings.GetDisableAllPlugins())
+            {
+                foreach (var script in enabledPluginScripts)
+                {
+                    var scriptJS = System.IO.File.ReadAllText(script);
+                    webBrowser.ExecuteScriptAsync(scriptJS);
+                }
+            }
             loadingPanel.Visible = false;
             loadingTimer.Enabled = false;
         }
@@ -382,12 +556,16 @@ namespace LittleWarGameClient
                 if (requestCallWhereLoadingFinished < requestCallCounter)
                 {
                     requestCallWhereLoadingFinished = requestCallCounter;
-                    var addonJS = System.IO.File.ReadAllText("js/addons.js");
+                    var addonJS = Encoding.Default.GetString(Properties.Resources.addons);
                     webBrowser.ExecuteScriptAsync(addonJS);
                     var overlayOptions = SettingsHelper.EnumToCommaSeparatedString<OverlayType>();
-                    ElementMessage.CallJSFunc(webBrowser, "init.function", $"\"{versionHandler.CurrentVersion}\", {settings.GetMouseLock().ToString().ToLower()}, {settings.GetVolume()}, {settings.GetInjectJS().ToString().ToLower()}, {((int)settings.GetOverlayType())}, \"{overlayOptions}\"");
+                    ElementMessage.CallJSFunc(webBrowser, "init.function", $"\"{versionHandler.CurrentVersion}\", {settings.GetMouseLock().ToString().ToLower()}, {settings.GetVolume()}, {settings.GetDisableAllPlugins().ToString().ToLower()}, {((int)settings.GetOverlayType())}, \"{overlayOptions}\"");
                     kbHandler.InitHotkeyNames((ChromiumWebBrowser)sender, settings);
                 }
+            }
+            else
+            {
+                InitPluginsGameScript();
             }
         }
 
@@ -409,13 +587,40 @@ namespace LittleWarGameClient
         {
             InvokeUI(() =>
             {
+                InitPlugins();
                 loaderImage.Visible = true;
                 loadingPanel.Visible = true;
                 loadingText.Text = "Loading";
                 loadingText.Enabled = true;
                 loadingTimer.Enabled = true;
                 gameHasLoaded = false;
+                if (settings.GetDebugMode())
+                    webBrowser.ShowDevTools();
             });
+        }
+
+        internal void SendAvailablePlugins()
+        {
+            var availablePlugins = pluginHandler.GetAvailablePluginsOnline();
+            foreach (var (pluginId, plugin) in availablePlugins)
+            {
+                string json = JsonSerializer.Serialize(plugin);
+                bool alreadyInstalled = pluginHandler.GetInstalledPlugins().ContainsKey(pluginId);
+                ElementMessage.CallJSFunc(webBrowser, "receiveAvailablePlugin", $"{alreadyInstalled.ToString().ToLower()},\'{json}\'");
+            }
+        }
+
+        internal void SendInstalledPluginsAndLatestVersions()
+        {
+            var latestVersions = pluginHandler.GetLatestVersionsOfAvailablePlugins();
+            foreach (var (pluginId, plugin) in pluginHandler.GetInstalledPlugins())
+            {
+                string json = JsonSerializer.Serialize(plugin);
+                string latestVersion = "null";
+                if (latestVersions.ContainsKey(pluginId))
+                   latestVersion = latestVersions[pluginId].ToString();
+                ElementMessage.CallJSFunc(webBrowser, "receiveInstalledPlugin", $"\'{latestVersion}\',\'{json}\'");
+            }
         }
     }
 

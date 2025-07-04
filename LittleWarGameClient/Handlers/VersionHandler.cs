@@ -6,7 +6,7 @@ namespace LittleWarGameClient.Handlers
 {
     internal class VersionHandler
     {
-        readonly SettingsHandler settings;
+        private readonly SettingsHandler settings;
         internal Version CurrentVersion { get; private set; }
         private Version? latestVersion;
         internal Version? LatestVersion
@@ -23,7 +23,7 @@ namespace LittleWarGameClient.Handlers
         }
         public event EventHandler LatestVersionObtained;
 
-        public VersionHandler(SettingsHandler s)
+        internal VersionHandler(SettingsHandler s)
         {
             settings = s;
             var productVersion = System.Windows.Forms.Application.ProductVersion.Split('+').First();
@@ -53,7 +53,7 @@ namespace LittleWarGameClient.Handlers
             {
                 if (RequiresUpdate())
                 {
-                    if (DialogResult.OK == MessageBox.Show("An update is available. Press OK to download it and exit the game", "Update", MessageBoxButtons.OKCancel))
+                    if (DialogResult.OK == MessageBox.Show("An update is available. Press OK to download it and exit the game", "Update", MessageBoxButtons.OKCancel, MessageBoxIcon.Error, MessageBoxDefaultButton.Button1, MessageBoxOptions.DefaultDesktopOnly))
                     {
                         var updateUrl = $"https://github.com/ivanpmartell/LittleWarGameClient/releases/download/v{LatestVersion}/";
                         var env = "x86";
@@ -91,7 +91,7 @@ namespace LittleWarGameClient.Handlers
         {
             var lastChecked = settings.GetLastUpdateChecked();
             var interval = settings.GetUpdateInterval();
-            var dateToCheckForUpdates = lastChecked.AddDays(interval);
+            var dateToCheckForUpdates = lastChecked.AddHours(interval);
             if (DateTime.Now < dateToCheckForUpdates)
                 return false;
             return true;

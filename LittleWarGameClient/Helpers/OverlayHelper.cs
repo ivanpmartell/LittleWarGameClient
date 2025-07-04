@@ -19,7 +19,7 @@ namespace LittleWarGameClient.Helpers
         private PeriodicTimer messageTimer;
         private readonly BDictionary<string, Notification> overlayMessages;
         
-        public OverlayHelper()
+        internal OverlayHelper()
         { 
             messageTimer = new PeriodicTimer(TimeSpan.FromSeconds(1));
             overlayMessages = new BDictionary<string, Notification>();

@@ -57,12 +57,18 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <TargetPath>steam_api64.dll</TargetPath>
     </ContentWithTargetPath>
-	<None Include="js\addons.js">
-	  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	</None>
-	<None Include="js\lwg.js">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	</None>
+    <None Include="plugins\sample\sample.js">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="plugins\sample\lwg.js">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="plugins\sample\plugin.txt">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="plugins\sample\plugin.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <ItemGroup>
@@ -75,14 +81,12 @@
     <PackageReference Include="nud2dlib" Version="2.0.0" Condition=" '$(Platform)' == 'x86' " />
     <PackageReference Include="nud2dlib-x64" Version="2.0.0" Condition=" '$(Platform)' == 'x64' " />
     <PackageReference Include="Octokit" Version="14.0.0" />
+    <PackageReference Include="SharpCompress" Version="0.40.0" />
     <PackageReference Include="SharpGL.WinForms" Version="3.1.1" />
-    <PackageReference Include="System.Management" Version="9.0.6" />
+    <PackageReference Include="System.Management" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Update="D2DOverlay.cs">
-      <SubType>Form</SubType>
-    </Compile>
     <Compile Update="Properties\Resources.Designer.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
@@ -91,9 +95,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Update="D2DOverlay.resx">
-      <SubType>Designer</SubType>
-    </EmbeddedResource>
     <EmbeddedResource Update="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>

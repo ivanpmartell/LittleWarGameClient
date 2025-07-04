@@ -1,11 +1,9 @@
-﻿using LittleWarGameClient.Handlers;
-using Loyc.Collections;
-using Steamworks;
-using SharpGL;
+﻿using LittleWarGameClient.Helpers;
 using Loyc;
-using nud2dlib.Windows.Forms;
+using Loyc.Collections;
 using nud2dlib;
-using LittleWarGameClient.Helpers;
+using nud2dlib.Windows.Forms;
+using Steamworks;
 
 namespace LittleWarGameClient
 {
@@ -28,7 +26,13 @@ namespace LittleWarGameClient
             InitializeComponent();
             try
             {
-                SteamClient.Init(480);
+                string appidFile = "steam_appid.txt";
+                if (!System.IO.File.Exists(appidFile))
+                    SteamClient.Init(480);
+                else
+                {
+                    SteamClient.Init(uint.Parse(IOHelper.ReadFirstLine(appidFile)));
+                }
                 SteamScreenshots.Hooked = true;
                 SteamScreenshots.OnScreenshotRequested += OnScreenShotRequested;
                 SteamFriends.OnGameOverlayActivated += OnGameOverlayActivated;
