@@ -209,7 +209,7 @@
   setNormalWindowSizes: function () {
     this.setElement("optionsChecklistDiv", "height: 510px;");
     this.setElement("pluginOptions", "height: 510px;");
-    this.resetElement("optionsWindow", "height:");
+    this.setElement("optionsWindow", "height: 720px");
     this.resetElement("queriesWindow", "height:");
     this.resetElement("optionsQuitButton", "margin-top:");
     this.resetElement("startButton", "top:");
