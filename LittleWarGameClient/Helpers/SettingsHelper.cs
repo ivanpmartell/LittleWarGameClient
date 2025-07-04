@@ -91,7 +91,7 @@ namespace LittleWarGameClient.Helpers
         {
             try
             {
-                return settings[sectionName][propertyName];
+                return DateTime.Parse(settings[sectionName][propertyName]);
             }
             catch
             {
@@ -138,13 +138,14 @@ namespace LittleWarGameClient.Helpers
         internal void SetVariable(string sectionName, string propertyName, DateTime value)
         {
             Section section = EnsureSection(sectionName);
+            string dateTimeString = $"{value.ToShortDateString()} {value.ToShortTimeString()}";
             try
             {
-                section[propertyName] = value;
+                section[propertyName] = dateTimeString;
             }
             catch
             {
-                section.Add(new Property(propertyName, value));
+                section.Add(new Property(propertyName, dateTimeString));
             }
         }
 

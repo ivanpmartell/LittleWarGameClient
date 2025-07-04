@@ -75,7 +75,7 @@ namespace LittleWarGameClient.Handlers
             }
             else
                 OverlayHelper.Instance.AddOverlayMessage("updateError", new Notification("Network Error: Could not check for newer versions"));
-            settings.SetLastUpdateChecked(DateTime.Now.Date);
+            settings.SetLastUpdateChecked(DateTime.Now);
             await settings.SaveAsync();
         }
 
