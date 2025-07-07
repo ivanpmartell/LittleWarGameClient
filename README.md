@@ -8,6 +8,8 @@ This project is completely open source. Feel free to fork and make pull requests
 
 ## Important
 
+This client is still in beta! As much as I try to make a bug-free program, the client can and will still have bugs. If you are a developer and find any issues, please feel free to make pull requests with the fixes.
+
 If updating from versions below 0.8.0:
 
 Versions 0.8.0+ are not compatible with previous versions. The libraries required to run the program have been updated and a full update is needed.

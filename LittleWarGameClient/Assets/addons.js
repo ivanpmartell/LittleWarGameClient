@@ -509,7 +509,7 @@ addons.init = {
       refreshButton.setAttribute("style", "color: lightgreen; padding-top: 1.5px;");
       var optionButtons = document.getElementById("optionsButtonsDiv");
       optionButtons.insertBefore(refreshButton, optionButtons.firstChild);
-      refreshButton.onclick = function () { addons.pressReloadButton(this); };
+      refreshButton.onclick = function () { addons.pressReloadButton(this); this.disabled = true; };
     }
   },
 
