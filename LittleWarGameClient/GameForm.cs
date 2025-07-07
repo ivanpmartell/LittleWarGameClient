@@ -78,15 +78,23 @@ namespace LittleWarGameClient
 
         private void InitPlugins()
         {
+            var enabledPluginsCount = 0;
             if (!settings.GetDisableAllPlugins())
             {
                 foreach (var (pluginId, plugin) in pluginHandler.GetInstalledPlugins())
                 {
                     if (plugin.Enabled)
                     {
+                        enabledPluginsCount++;
                         LoadPlugin(pluginId);
                     }
                 }
+            }
+            if (enabledPluginsCount == 0)
+            {
+                mainImage.Image = Properties.Resources.soldier;
+                mainImage.Location = new Point(582, 70);
+                mainImage.Size = new Size(100, 100);
             }
         }
 

@@ -375,8 +375,10 @@ addons.init = {
   function(clientVersion, mouseLock, volume, disablePlugins, overlayType, overlayOptions) {
     this.handleConnectionError();
     this.addExitButton();
-    this.addPluginsButton();
-    this.addPluginsDiv();
+    if (!disablePlugins) {
+      this.addPluginsButton();
+      this.addPluginsDiv();
+    }
     this.addRefreshButton();
     this.resizeInfoWindow();
     this.moveLoadingText();
