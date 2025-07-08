@@ -251,9 +251,11 @@
   },
 
   displayNotification: function (msg, height = 150) {
-    document.getElementById("infoWindow").style.height = height + "px";
-    document.getElementById("infoWindow").style.display = "inline";
-    document.getElementById("infoWindow").style.opacity = "100";
+    var infoWindow = document.getElementById("infoWindow");
+    infoWindow.style.height = height + "px";
+    infoWindow.style.display = "inline";
+    infoWindow.style.opacity = "100";
+    infoWindow.style.zIndex = "9999";
     var notificationText = document.createElement("div");
     notificationText.classList.add("infoWindowText");
     notificationText.innerText = msg;
@@ -419,6 +421,13 @@ addons.init = {
           addons.displayNotification("Replay has been saved");
         }
       }
+    }
+    var saveReplayButton = document.getElementById("saveReplayButton");
+    const existingSaveReplayButtonHandler = saveReplayButton.onclick;
+    saveReplayButton.onclick = function () {
+      if (existingSaveReplayButtonHandler)
+        existingSaveReplayButtonHandler();
+      addons.displayNotification("Replay has been saved");
     }
   },
 
