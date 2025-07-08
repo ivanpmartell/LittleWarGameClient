@@ -425,7 +425,7 @@ namespace LittleWarGameClient
                     D2DOverlay.Instance.Location = webViewBounds.Location;
                     break;
                 case OverlayType.OpenGL:
-                    OpenGLOverlay.Instance.Size = webBrowser.Size;
+                    OpenGLOverlay.Instance.Size = new Size(webBrowser.Size.Width, webBrowser.Size.Height - 1);
                     OpenGLOverlay.Instance.Location = webViewBounds.Location;
                     break;
             }
