@@ -90,7 +90,10 @@ namespace LittleWarGameClient
             if (enabledPluginsCount == 0)
             {
                 mainImage.Image = Properties.Resources.soldier;
+                var originalSize = loadingPanel.Size;
+                loadingPanel.Size = new Size(1264, 681);
                 mainImage.Location = new Point(582, 70);
+                loadingPanel.Size = originalSize;
                 mainImage.Size = new Size(100, 100);
             }
         }
