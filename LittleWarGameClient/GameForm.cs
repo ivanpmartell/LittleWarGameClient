@@ -126,7 +126,10 @@ namespace LittleWarGameClient
             }
             if (plugin.ImageLocation != null)
             {
+                var originalSize = loadingPanel.Size;
+                loadingPanel.Size = new Size(1264, 681);
                 mainImage.Location = (Point)plugin.ImageLocation;
+                loadingPanel.Size = originalSize;
             }
             if (plugin.ImageSize != null)
             {
