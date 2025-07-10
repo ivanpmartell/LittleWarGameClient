@@ -14,8 +14,8 @@ namespace LittleWarGameClient.Handlers
         private readonly string pluginsDirectory;
         private readonly string enabledFilePath;
         private readonly string localReleaseFile;
+        private readonly HashSet<string> enabledPlugins = new();
         private readonly Dictionary<string, Plugin> installedPlugins;
-        private readonly Dictionary<string, Version> latestPluginVersions;
         private DateTime latestGithubCall = DateTime.Now.AddMinutes(-5);
 
         internal PluginHandler(string exeDirectory, SettingsHandler s)
@@ -23,9 +23,8 @@ namespace LittleWarGameClient.Handlers
             settings = s;
             pluginsDirectory = Path.Combine(exeDirectory, "plugins");
             enabledFilePath = Path.Combine(pluginsDirectory, "enabled.txt");
-            localReleaseFile = Path.Combine(pluginsDirectory, "*.tar.gz");
+            localReleaseFile = Path.Combine(pluginsDirectory, "plugins.tar.gz");
             installedPlugins = ObtainInstalledPlugins();
-            latestPluginVersions = GetLatestVersionsOfAvailablePlugins();
         }
 
         internal void SynchronizeWithLocalPlugins()
@@ -36,13 +35,11 @@ namespace LittleWarGameClient.Handlers
         internal List<string> GetEnabledPluginIdsThatModifyLoadingImage()
         {
             List<string> result = new();
-            foreach (var (pluginId, plugin) in installedPlugins)
+            foreach (var pluginId in enabledPlugins)
             {
-                if (plugin.Enabled)
-                {
-                    if (plugin.ModifiesLoadingImage())
-                        result.Add(pluginId);
-                }
+                Plugin plugin = installedPlugins[pluginId];
+                if (plugin.ModifiesLoadingImage())
+                    result.Add(pluginId);
             }
             return result;
         }
@@ -50,13 +47,11 @@ namespace LittleWarGameClient.Handlers
         internal List<string> GetEnabledPluginIdsThatModifyGameScript()
         {
             List<string> result = new();
-            foreach (var (pluginId, plugin) in installedPlugins)
+            foreach (var pluginId in enabledPlugins)
             {
-                if (plugin.Enabled)
-                {
-                    if (plugin.ModifiesGameScript())
-                        result.Add(pluginId);
-                }
+                Plugin plugin = installedPlugins[pluginId];
+                if (plugin.ModifiesGameScript())
+                    result.Add(pluginId);
             }
             return result;
         }
@@ -68,6 +63,7 @@ namespace LittleWarGameClient.Handlers
                 if (!installedPlugins[id].Enabled)
                 {
                     installedPlugins[id].Enabled = true;
+                    enabledPlugins.Add(id);
                     SynchronizeEnabledPluginsWithFile();
                 }
             }
@@ -80,6 +76,7 @@ namespace LittleWarGameClient.Handlers
                 if (installedPlugins[id].Enabled)
                 {
                     installedPlugins[id].Enabled = false;
+                    enabledPlugins.Remove(id);
                     SynchronizeEnabledPluginsWithFile();
                 }
             }
@@ -111,6 +108,7 @@ namespace LittleWarGameClient.Handlers
 
         internal void UninstallAPlugin(string id)
         {
+            DisableAPlugin(id);
             installedPlugins.Remove(id);
             string pluginPath = Path.Combine(pluginsDirectory, id);
             if (Directory.Exists(pluginPath))
@@ -125,6 +123,11 @@ namespace LittleWarGameClient.Handlers
         internal Dictionary<string, Plugin> GetInstalledPlugins()
         {
             return installedPlugins;
+        }
+
+        internal HashSet<string> GetEnabledPluginIds()
+        {
+            return enabledPlugins;
         }
 
         private Dictionary<string, Plugin> ObtainInstalledPlugins()
@@ -142,8 +145,8 @@ namespace LittleWarGameClient.Handlers
         private async Task<string?> InstallPluginAsync(string id)
         {
             string pluginPath = Path.Combine(pluginsDirectory, id);
-            string? localReleaseFile = await LatestPluginsReleaseFileDownloaded();
-            if (localReleaseFile != null)
+            bool releaseFileObtained = await LatestPluginsReleaseFileDownloaded();
+            if (releaseFileObtained)
             {
                 using (Stream stream = File.OpenRead(localReleaseFile))
                 {
@@ -184,12 +187,9 @@ namespace LittleWarGameClient.Handlers
         {
             using (StreamWriter writer = new(enabledFilePath))
             {
-                foreach (var (pluginId, plugin) in installedPlugins)
+                foreach (var pluginId in enabledPlugins)
                 {
-                    if (plugin.Enabled)
-                    {
-                        writer.WriteLine(pluginId);
-                    }
+                    writer.WriteLine(pluginId);
                 }
             }
         }
@@ -203,6 +203,7 @@ namespace LittleWarGameClient.Handlers
                     writer.Write("sample");
                 }
             }
+            enabledPlugins.Clear();
             string tempFile = Path.GetTempFileName();
             using (StreamReader reader = new(enabledFilePath))
             {
@@ -216,6 +217,7 @@ namespace LittleWarGameClient.Handlers
                         if (installedPlugins.ContainsKey(line))
                         {
                             installedPlugins[line].Enabled = true;
+                            enabledPlugins.Add(line);
                             writer.WriteLine(line);
                         }
                     }
@@ -227,17 +229,16 @@ namespace LittleWarGameClient.Handlers
 
         private async Task<Dictionary<string, Plugin>> GetAvailablePluginsOnlineAsync()
         {
-            string? localReleaseFile = await LatestPluginsReleaseFileDownloaded();
-            if (localReleaseFile != null)
-                return GetPluginsFromTarball(localReleaseFile);
+            bool releaseFileObtained = await LatestPluginsReleaseFileDownloaded();
+            if (releaseFileObtained)
+                return GetPluginsFromTarball();
             else
                 return new Dictionary<string, Plugin>();
         }
 
-        private async Task<string?> LatestPluginsReleaseFileDownloaded()
+        private async Task<bool> LatestPluginsReleaseFileDownloaded()
         {
             Release release = await GetLatestPluginsReleaseTag();
-            var localReleaseFile = Path.Combine(pluginsDirectory, $"plugins.tar.gz");
             if (release.TagName != null)
             {
                 var match = Regex.Match(release.TagName, @"\d+(\.\d+)+");
@@ -248,17 +249,17 @@ namespace LittleWarGameClient.Handlers
                     {
                         await DownloadReleaseTarball(release.TarballUrl, localReleaseFile);
                         if (!IOHelper.IsTarFile(localReleaseFile))
-                            return null;
+                            return false;
                         settings.SetPluginRepoReleaseVersion(latestOnlineReleaseVersion);
                     }
-                    return localReleaseFile;
+                    return true;
                 }
             }
             else if (File.Exists(localReleaseFile))
             {
-                return localReleaseFile;
+                return true;
             }
-            return null;
+            return false;
         }
 
         private async Task DownloadReleaseTarball(string url, string savePath)
@@ -291,10 +292,10 @@ namespace LittleWarGameClient.Handlers
             }
         }
 
-        private Dictionary<string, Plugin> GetPluginsFromTarball(string filePath)
+        private Dictionary<string, Plugin> GetPluginsFromTarball()
         {
             var plugins = new Dictionary<string, Plugin>();
-            using (Stream stream = File.OpenRead(filePath))
+            using (Stream stream = File.OpenRead(localReleaseFile))
             {
                 var reader = TarReader.Open(stream);
                 while (reader.MoveToNextEntry())

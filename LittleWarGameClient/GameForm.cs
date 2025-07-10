@@ -81,13 +81,10 @@ namespace LittleWarGameClient
             var enabledPluginsCount = 0;
             if (!settings.GetDisableAllPlugins())
             {
-                foreach (var (pluginId, plugin) in pluginHandler.GetInstalledPlugins())
+                foreach (var pluginId in pluginHandler.GetEnabledPluginIds())
                 {
-                    if (plugin.Enabled)
-                    {
-                        enabledPluginsCount++;
-                        LoadPlugin(pluginId);
-                    }
+                    enabledPluginsCount++;
+                    LoadPlugin(pluginId);
                 }
             }
             if (enabledPluginsCount == 0)
@@ -104,19 +101,17 @@ namespace LittleWarGameClient
             {
                 pluginHandler.SynchronizeWithLocalPlugins();
                 enabledPluginScripts.Clear();
-                foreach (var (pluginId, plugin) in pluginHandler.GetInstalledPlugins())
+                foreach (var pluginId in pluginHandler.GetEnabledPluginIds())
                 {
-                    if (plugin.Enabled)
+                    Plugin plugin = pluginHandler.GetInstalledPlugins()[pluginId];
+                    if (plugin.GameScript != null)
                     {
-                        if (plugin.GameScript != null)
-                        {
-                            string gameScriptPath = Path.Combine(plugin.AbsolutePluginPath!, plugin.GameScript);
-                            if (File.Exists(gameScriptPath))
-                                webBrowser.RequestHandler = new RequestInterceptor(gameScriptPath);
-                        }
-                        else
-                            webBrowser.RequestHandler = new DefaultRequestInterceptor();
+                        string gameScriptPath = Path.Combine(plugin.AbsolutePluginPath!, plugin.GameScript);
+                        if (File.Exists(gameScriptPath))
+                            webBrowser.RequestHandler = new RequestInterceptor(gameScriptPath);
                     }
+                    else
+                        webBrowser.RequestHandler = new DefaultRequestInterceptor();
                 }
             }
         }
@@ -221,7 +216,7 @@ namespace LittleWarGameClient
 
         internal void DisablePlugin(string pluginId)
         {
-            if (!pluginHandler.GetInstalledPlugins()[pluginId].Enabled)
+            if (!pluginHandler.GetEnabledPluginIds().Contains(pluginId))
                 return;
             pluginHandler.DisableAPlugin(pluginId);
             if (DialogResult.OK == MessageBox.Show("Disabling a plugin requires reloading the game. Reload now?", "Warning", MessageBoxButtons.OKCancel))
@@ -255,9 +250,14 @@ namespace LittleWarGameClient
 
         internal void UninstallPlugin(string pluginId)
         {
+            bool pluginWasEnabled = pluginHandler.GetEnabledPluginIds().Contains(pluginId);
             pluginHandler.UninstallAPlugin(pluginId);
             RefreshInstalledPluginsTabContents();
-            MessageBox.Show("Plugin was successfully uninstalled", "Success", MessageBoxButtons.OK);
+            if (pluginWasEnabled)
+                if (DialogResult.OK == MessageBox.Show("Enabled plugin was successfully uninstalled. This has disabled the plugin and requires reloading the game. Reload now?", "Warning", MessageBoxButtons.OKCancel))
+                    ReloadGame();
+                else
+                MessageBox.Show("Plugin was successfully uninstalled", "Success", MessageBoxButtons.OK);
         }
 
         internal void UpdatePlugin(string pluginId)
