@@ -210,23 +210,28 @@
     this.setElement("optionsChecklistDiv", "height: 510px;");
     this.setElement("pluginOptions", "height: 510px;");
     this.setElement("optionsWindow", "height: 720px");
-    this.resetElement("queriesWindow", "height:");
-    this.resetElement("optionsQuitButton", "margin-top:");
-    this.resetElement("startButton", "top:");
-    this.resetElement("backButton", "top:");
+    this.resetElement("queriesWindow", "height");
+    this.resetElement("optionsQuitButton", "margin-top");
+    this.resetElement("startButton", "top");
+    this.resetElement("backButton", "top");
   },
 
   resetElement: function (elementName, styleProperty) {
     var element = document.getElementById(elementName);
-    var smallIdx = element.style.cssText.indexOf(styleProperty)
-    if (smallIdx != -1) {
-      element.style.cssText = element.style.cssText.substring(0, smallIdx)
+    if (element == null) {
+      console.log("Tried to reset a style for a nonexistent element: " + elementName);
+      return;
     }
+    element.style.removeProperty(styleProperty);
   },
 
   setElement: function (elementName, styleProperty) {
     var element = document.getElementById(elementName);
-    var smallIdx = element.style.cssText.indexOf(styleProperty)
+    if (element == null) {
+      console.log("Tried to set a style for a nonexistent element: " + elementName);
+      return;
+    }
+    var smallIdx = element.style.cssText.indexOf(styleProperty);
     if (smallIdx == -1) {
       element.style.cssText += styleProperty;
     }

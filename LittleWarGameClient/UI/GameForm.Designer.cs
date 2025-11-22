@@ -42,10 +42,10 @@ namespace LittleWarGameClient.UI
             loadingPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)mainImage).BeginInit();
             SuspendLayout();
-            // 
-            // loaderImage
-            // 
-            loaderImage.Anchor = AnchorStyles.None;
+			// 
+			// loaderImage
+			// 
+			loaderImage.Anchor = AnchorStyles.None;
             loaderImage.ErrorImage = null;
             loaderImage.Image = Properties.Resources.wolfRunning;
             loaderImage.InitialImage = null;
@@ -63,7 +63,7 @@ namespace LittleWarGameClient.UI
             loadingPanel.Controls.Add(mainImage);
             loadingPanel.Controls.Add(loaderImage);
             loadingPanel.Dock = DockStyle.Fill;
-            loadingPanel.ForeColor = Color.White;
+            loadingPanel.ForeColor = Color.Black;
             loadingPanel.Location = new Point(0, 0);
             loadingPanel.Name = "loadingPanel";
             loadingPanel.Size = new Size(1264, 681);
@@ -133,9 +133,9 @@ namespace LittleWarGameClient.UI
             Deactivate += GameForm_Deactivate;
             FormClosing += GameForm_FormClosing;
             Load += GameForm_Load;
+            ResizeBegin += GameForm_ResizeBegin;
             ResizeEnd += GameForm_ResizeEnd;
             LocationChanged += GameForm_LocationChanged;
-            Resize += GameForm_Resize;
             ((System.ComponentModel.ISupportInitialize)loaderImage).EndInit();
             loadingPanel.ResumeLayout(false);
             loadingPanel.PerformLayout();

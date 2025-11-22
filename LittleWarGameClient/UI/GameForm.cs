@@ -466,19 +466,24 @@ namespace LittleWarGameClient.UI
             }
         }
 
-        private void GameForm_Resize(object sender, EventArgs e)
-        {
-			GraphicsOverlay?.SetSizeTo(new Size(webBrowser.Size.Width, webBrowser.Size.Height - 1));
-
-			CaptureCursor();
-            ResizeGameWindows();
-        }
+		private void GameForm_ResizeBegin(object sender, EventArgs e)
+		{
+			SuspendLayout();
+			GraphicsOverlay?.MakeVisible(false);
+		}
 
         private async void GameForm_ResizeEnd(object sender, EventArgs e)
         {
-            CaptureCursor();
+            ResumeLayout(false);
+            PerformLayout();
+			GraphicsOverlay?.SetSizeTo(new Size(webBrowser.Size.Width, webBrowser.Size.Height - 1));
+			GraphicsOverlay?.MakeVisible(true);
+
+			ResizeGameWindows();
+			CaptureCursor();
             settings.SetWindowSize(Size);
             await settings.SaveAsync();
+            Activate();
         }
 
         internal async void MouseLock(bool choice)
@@ -589,18 +594,6 @@ namespace LittleWarGameClient.UI
                    latestVersion = latestVersions[pluginId].ToString();
                 ElementMessage.CallJSFunc(webBrowser, "receiveInstalledPlugin", $"\'{latestVersion}\',\'{json}\'");
             }
-        }
-    }
-
-    internal readonly record struct Notification
-    {
-        internal string Message { get; }
-        internal DateTime PostedTime { get; }
-
-        internal Notification(string msg)
-        {
-            Message = msg;
-            PostedTime = DateTime.Now;
         }
     }
 }

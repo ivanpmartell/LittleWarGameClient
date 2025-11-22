@@ -182,4 +182,16 @@ namespace LittleWarGameClient.Helpers
         Direct2D,
         OpenGL
     }
+
+	internal readonly record struct Notification
+	{
+		internal string Message { get; }
+		internal DateTime PostedTime { get; }
+
+		internal Notification(string msg)
+		{
+			Message = msg;
+			PostedTime = DateTime.Now;
+		}
+	}
 }
