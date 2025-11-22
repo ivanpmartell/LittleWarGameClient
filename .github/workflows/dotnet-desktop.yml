@@ -49,8 +49,7 @@ jobs:
     runs-on: windows-latest
     outputs:
       Version: ${{ steps.tag_version.outputs.new_version }}
-      Tag: ${{ steps.tag_version.outputs.new_tag }}
-      Changelog: ${{ steps.tag_version.outputs.changelog }}
+      UploadUrl: ${{ steps.create_release.outputs.upload_url }}
     steps:
     - name: Bump version and push tag
       id: tag_version
@@ -58,6 +57,18 @@ jobs:
       with:
         github_token: ${{ secrets.TOKEN }}
         default_bump: patch
+
+    - name: Create a GitHub release
+      uses: actions/create-release@v1
+      id: create_release
+      with:
+        draft: false
+        prerelease: false
+        release_name: Release ${{ steps.tag_version.outputs.new_tag }}
+        tag_name: ${{ steps.tag_version.outputs.new_tag }}
+        body: ${{ steps.tag_version.outputs.changelog }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.TOKEN }}
 
   build:
     needs: prepare
@@ -128,39 +139,26 @@ jobs:
       env:
         Platform: ${{ matrix.platform }}
         PublishedDir: ${{ env.Wap_Project_Directory }}\bin\${{ matrix.platform }}\${{ matrix.configuration }}\net8.0-windows\win-${{ matrix.platform }}\publish
-
-    - name: Create a GitHub release
-      uses: actions/create-release@v1
-      id: create_release
-      continue-on-error: true
-      with:
-        draft: false
-        prerelease: false
-        release_name: Release ${{ needs.prepare.outputs.Tag }}
-        tag_name: ${{ needs.prepare.outputs.Tag }}
-        body: ${{ needs.prepare.outputs.Changelog }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.TOKEN }}
         
-    - name: Upload complete build artifact
+    - name: upload complete build artifact
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.TOKEN }}
         Platform: ${{ matrix.platform }}
       with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        upload_url: ${{ needs.prepare.outputs.UploadUrl }}
         asset_path: lwg_client${{ env.Platform }}.zip
         asset_name: lwg_client${{ env.Platform }}.zip
         asset_content_type: application/zip
 
-    - name: Upload update only artifact
+    - name: upload update only artifact
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.TOKEN }}
         Platform: ${{ matrix.platform }}
         PublishedDir: ${{ env.Wap_Project_Directory }}\bin\${{ matrix.platform }}\${{ matrix.configuration }}\net8.0-windows\win-${{ matrix.platform }}\publish
       with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        upload_url: ${{ needs.prepare.outputs.UploadUrl }}
         asset_path: ${{ env.PublishedDir }}\update_${{ env.Platform }}.zip
         asset_name: update_${{ env.Platform }}.zip
         asset_content_type: application/zip
