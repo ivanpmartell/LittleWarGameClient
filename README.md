@@ -1,4 +1,4 @@
-# **Littlewargame client made for Windows 7+**
+# **Littlewargame client made for Windows 10+**
 
 It contains additional improvements to the web-based client such as borderless windowed mode, additional hotkeys, not being tied to your web browser to play and cursor lock to window not lagging.
 
@@ -34,7 +34,7 @@ This will also let you run multiple instance of the game at the same time. The d
 
 ## Overlays
 
-The OpenGL overlay is enabled by default. You can change the overlay to use Direct2D, or turn the overlay completely.
+The OpenGL overlay is enabled by default. You can change the overlay to use Direct2D, or turn the overlay off completely.
 The overlay allows steam overlay integration, as well as notifications, e.g. Download progress of replays.
 
 ## Plugin Support

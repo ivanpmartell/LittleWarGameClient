@@ -2,12 +2,10 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net6.0-windows7.0</TargetFramework>
+    <TargetFramework>net8.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
-    <SignAssembly>False</SignAssembly>
-    <DelaySign>True</DelaySign>
     <ApplicationIcon>Assets\logo.ico</ApplicationIcon>
     <Platforms>x64;x86</Platforms>
   </PropertyGroup>
@@ -49,14 +47,6 @@
 
   <ItemGroup>
     <Content Include="Assets\logo.ico" />
-	<ContentWithTargetPath Include="steam\steam_api.dll" Condition=" '$(Platform)' == 'x86' ">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		<TargetPath>steam_api.dll</TargetPath>
-    </ContentWithTargetPath>
-	<ContentWithTargetPath Include="steam\steam_api64.dll" Condition=" '$(Platform)' == 'x64' ">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <TargetPath>steam_api64.dll</TargetPath>
-    </ContentWithTargetPath>
     <None Include="plugins\sample\sample.js">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -73,8 +63,6 @@
 
   <ItemGroup>
     <PackageReference Include="CefSharp.WinForms.NETCore" Version="137.0.100" />
-    <PackageReference Include="Facepunch.Steamworks" Version="2.3.3" Condition=" '$(Platform)' == 'x64' " />
-    <PackageReference Include="Facepunch.Steamworks.win32" Version="2.3.3" Condition=" '$(Platform)' == 'x86' " />
     <PackageReference Include="IniFile.NET" Version="1.6.0" />
     <PackageReference Include="Loyc.Collections" Version="30.1.3" />
     <PackageReference Include="NAudio" Version="2.2.1" />

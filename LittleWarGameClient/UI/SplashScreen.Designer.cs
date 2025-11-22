@@ -1,4 +1,4 @@
-﻿namespace LittleWarGameClient
+﻿namespace LittleWarGameClient.UI
 {
     partial class SplashScreen
     {
@@ -70,7 +70,6 @@
             Name = "SplashScreen";
             StartPosition = FormStartPosition.CenterScreen;
             Text = "Littlewargame";
-            Load += SplashScreen_Load;
             ((System.ComponentModel.ISupportInitialize)pictureBox1).EndInit();
             ResumeLayout(false);
             PerformLayout();

@@ -1,5 +1,6 @@
 ﻿using CefSharp;
 using CefSharp.Handler;
+using LittleWarGameClient.UI;
 using System.Text.RegularExpressions;
 
 namespace LittleWarGameClient.Interceptors

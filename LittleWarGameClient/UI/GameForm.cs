@@ -6,23 +6,15 @@ using LittleWarGameClient.Interceptors;
 using System.Text;
 using System.Text.Json;
 
-namespace LittleWarGameClient
+namespace LittleWarGameClient.UI
 {
-    internal partial class GameForm : Form
+    internal sealed partial class GameForm : Form
     {
-        private static GameForm? formInstance;
-        internal static GameForm Instance
+		private static readonly Lazy<GameForm> _instance = new(() => new GameForm());
+		internal static GameForm Instance
         {
-            get
-            {
-                if (formInstance == null || formInstance.IsDisposed)
-                    formInstance = new GameForm();
-                return formInstance;
-            }
+            get { return _instance.Value; }
         }
-#pragma warning disable CS8618
-        internal static string InstanceName { get; set; }
-#pragma warning restore CS8618
 
         internal const string baseUrl = @"https://littlewargame.com/play";
         private readonly List<string> enabledPluginScripts = new();
@@ -39,25 +31,40 @@ namespace LittleWarGameClient
         private bool gameHasLoaded = false;
         private bool mouseLocked;
         
+        internal IGraphicsOverlay? GraphicsOverlay { get; private set; } = null;
 
-        internal bool isOverlayActivated = false;
 
-        internal GameForm()
+		private GameForm()
         {
-            if (InstanceName == null)
-                throw new MissingFieldException(nameof(InstanceName));
-            string exeDirectory = Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath)!;
-            PreInitWeb(exeDirectory);
+            PreInitWeb(WindowHandler.Instance.ExeDirectory);
             InitializeComponent();
-            Text = $"Littlewargame({InstanceName})";
+            Text = WindowHandler.Instance.MainWindowTitle;
+            InitOverlay();
             InitLoadingScreen();
             audioHandler = new AudioHandler(Text);
             kbHandler = new KeyboardHandler(settings);
             versionHandler = new VersionHandler(settings);
-            pluginHandler = new PluginHandler(exeDirectory, settings);
+            pluginHandler = new PluginHandler(settings);
             InitScreen();
             InitWebView();
-        }
+			SplashScreen.Instance.CloseSplashScreen();
+		}
+
+        private void InitOverlay()
+        {
+			switch (settings.GetOverlayType())
+			{
+				case OverlayType.Direct2D:
+					GraphicsOverlay = new D2DOverlay();
+					break;
+				case OverlayType.OpenGL:
+					GraphicsOverlay = new OpenGLOverlay();
+					break;
+                default:
+                    GraphicsOverlay = null;
+                    break;
+			}
+		}
 
         private void InitLoadingScreen()
         {
@@ -72,7 +79,7 @@ namespace LittleWarGameClient
             cefSettings.CefCommandLineArgs.Add("no-proxy-server", "1");
             cefSettings.CefCommandLineArgs.Add("disable-plugins-discovery", "1");
             cefSettings.CefCommandLineArgs.Add("disable-extensions", "1");
-            cefSettings.RootCachePath = Path.Join(exeDirectory, "data", InstanceName);
+            cefSettings.RootCachePath = Path.Join(exeDirectory, "data", WindowHandler.Instance.Profile);
             Cef.Initialize(cefSettings);
         }
 
@@ -174,17 +181,10 @@ namespace LittleWarGameClient
                 if (overlayType == settings.GetOverlayType())
                     return;
                 await OverlayHelper.Instance.StopAsync();
-                switch (settings.GetOverlayType())
-                {
-                    case OverlayType.Direct2D:
-                        D2DOverlay.Instance.Close();
-                        break;
-                    case OverlayType.OpenGL:
-                        OpenGLOverlay.Instance.Close();
-                        break;
-                }
+                GraphicsOverlay?.Close();
                 settings.SetOverlayType(overlayType);
                 await settings.SaveAsync();
+                InitOverlay();
                 var prevWindowState = WindowState;
                 WindowState = FormWindowState.Minimized;
                 WindowState = prevWindowState;
@@ -405,45 +405,26 @@ namespace LittleWarGameClient
         private void GameForm_LocationChanged(object sender, EventArgs e)
         {
             var webViewBounds = new Rectangle(webBrowser.PointToScreen(Point.Empty), webBrowser.Size);
-            switch (settings.GetOverlayType())
-            {
-                case OverlayType.Direct2D:
-                    D2DOverlay.Instance.Location = webViewBounds.Location;
-                    break;
-                case OverlayType.OpenGL:
-                    OpenGLOverlay.Instance.Location = webViewBounds.Location;
-                    break;
-            }
+
+            GraphicsOverlay?.SetLocationTo(webViewBounds.Location);
         }
 
         private void GameForm_Load(object sender, EventArgs e)
         {
-            SplashScreen.Instance.InvokeUI(() =>
-            {
-                SplashScreen.Instance.Close();
-                SplashScreen.Instance.Dispose();
-            });
-            var webViewBounds = new Rectangle(webBrowser.PointToScreen(Point.Empty), webBrowser.Size);
-            switch (settings.GetOverlayType())
-            {
-                case OverlayType.Direct2D:
-                    D2DOverlay.Instance.Size = webBrowser.Size;
-                    D2DOverlay.Instance.Location = webViewBounds.Location;
-                    break;
-                case OverlayType.OpenGL:
-                    OpenGLOverlay.Instance.Size = new Size(webBrowser.Size.Width, webBrowser.Size.Height - 1);
-                    OpenGLOverlay.Instance.Location = webViewBounds.Location;
-                    break;
-            }
+			var webViewBounds = new Rectangle(webBrowser.PointToScreen(Point.Empty), webBrowser.Size);
+
+			GraphicsOverlay?.SetLocationTo(webViewBounds.Location);
+			GraphicsOverlay?.SetSizeTo(new Size(webBrowser.Size.Width, webBrowser.Size.Height - 1));
+
             Activate();
         }
 
         internal void InvokeUI(Action a)
         {
-            if (formInstance != null && formInstance.InvokeRequired)
+            if (Instance.InvokeRequired)
             {
-                if (formInstance.IsHandleCreated)
-                    formInstance.BeginInvoke(new MethodInvoker(a));
+                if (Instance.IsHandleCreated)
+					Instance.BeginInvoke(new MethodInvoker(a));
             }
             else
             {
@@ -453,17 +434,9 @@ namespace LittleWarGameClient
 
         private void GameForm_Deactivate(object sender, EventArgs e)
         {
-            if (!GameForm.Instance.isOverlayActivated)
+            if (!OverlayHelper.Instance.IsSteamOverlayActivated)
             {
-                switch (settings.GetOverlayType())
-                {
-                    case OverlayType.Direct2D:
-                            D2DOverlay.Instance.Visible = false;
-                        break;
-                    case OverlayType.OpenGL:
-                            OpenGLOverlay.Instance.Visible = false;
-                        break;
-                }
+                GraphicsOverlay?.MakeVisible(false);
             }
         }
 
@@ -474,18 +447,8 @@ namespace LittleWarGameClient
             if (kbHandler.hasHangingAltKey) //Alt-Tab fix for game
                 SendKeys.Send("%{F16}");
 
-            switch (settings.GetOverlayType())
-            {
-                case OverlayType.Direct2D:
-                    if (!D2DOverlay.Instance.IsDisposed)
-                        D2DOverlay.Instance.Visible = true;
-                    break;
-                case OverlayType.OpenGL:
-                    if (!OpenGLOverlay.Instance.IsDisposed)
-                        OpenGLOverlay.Instance.Visible = true;
-                    break;
-            }
-        }
+			GraphicsOverlay?.MakeVisible(true);
+		}
 
         private void GameForm_FormClosing(object sender, FormClosingEventArgs e)
         {
@@ -505,18 +468,9 @@ namespace LittleWarGameClient
 
         private void GameForm_Resize(object sender, EventArgs e)
         {
-            switch (settings.GetOverlayType())
-            {
-                case OverlayType.Direct2D:
-                    D2DOverlay.Instance.Size = webBrowser.Size;
-                    break;
-                case OverlayType.OpenGL:
-                    //OpenGL specific fix where fullscreen does not allow for transparency
-                    OpenGLOverlay.Instance.Size = new Size(webBrowser.Size.Width, webBrowser.Size.Height - 1);
-                    break;
-            }
+			GraphicsOverlay?.SetSizeTo(new Size(webBrowser.Size.Width, webBrowser.Size.Height - 1));
 
-            CaptureCursor();
+			CaptureCursor();
             ResizeGameWindows();
         }
 

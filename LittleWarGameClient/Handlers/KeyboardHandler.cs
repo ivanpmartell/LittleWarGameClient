@@ -2,6 +2,7 @@
 using CefSharp.WinForms;
 using CefSharp;
 using LittleWarGameClient.Helpers;
+using LittleWarGameClient.UI;
 
 namespace LittleWarGameClient.Handlers
 {
@@ -83,7 +84,7 @@ namespace LittleWarGameClient.Handlers
 
         public bool OnPreKeyEvent(IWebBrowser webView, IBrowser browser, KeyType type, int windowsKeyCode, int nativeKeyCode, CefEventFlags modifiers, bool isSystemKey, ref bool isKeyboardShortcut)
         {
-            if (GameForm.Instance.isOverlayActivated)
+            if (OverlayHelper.Instance.IsSteamOverlayActivated)
                 return true;
 
             var key = (Keys)windowsKeyCode;

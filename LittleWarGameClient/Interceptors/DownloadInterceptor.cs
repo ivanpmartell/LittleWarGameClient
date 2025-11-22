@@ -1,6 +1,7 @@
 ﻿using CefSharp;
 using CefSharp.Handler;
 using LittleWarGameClient.Helpers;
+using LittleWarGameClient.UI;
 
 namespace LittleWarGameClient.Interceptors
 {

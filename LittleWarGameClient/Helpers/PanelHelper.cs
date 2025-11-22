@@ -11,7 +11,7 @@ namespace LittleWarGameClient.Helpers
                BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.SetProperty,
                null,
                panel,
-               new object[] { true });
+               [true]);
         }
     }
 }

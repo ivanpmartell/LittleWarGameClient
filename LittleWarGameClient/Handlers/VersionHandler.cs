@@ -1,4 +1,5 @@
 ﻿using LittleWarGameClient.Helpers;
+using LittleWarGameClient.UI;
 using Octokit;
 using System.Diagnostics;
 
@@ -34,7 +35,7 @@ namespace LittleWarGameClient.Handlers
             LatestVersionObtained += CheckForUpdate;
             if (CanCheckForUpdate())
             {
-                OverlayHelper.Instance.AddOverlayMessage("updateCheck", new Notification("Checking for updates..."));
+                OverlayHelper.Instance.AddOverlayMessage("updateCheck", new UI.Notification("Checking for updates..."));
                 new Thread(() =>
                 {
                     PerformCheck();
@@ -68,13 +69,13 @@ namespace LittleWarGameClient.Handlers
                         GameForm.Instance.Close();
                     }
                     else
-                        OverlayHelper.Instance.AddOverlayMessage("updateCancel", new Notification("Update canceled"));
+                        OverlayHelper.Instance.AddOverlayMessage("updateCancel", new UI.Notification("Update canceled"));
                 }
                 else
-                    OverlayHelper.Instance.AddOverlayMessage("updateNA", new Notification("No update required"));
+                    OverlayHelper.Instance.AddOverlayMessage("updateNA", new UI.Notification("No update required"));
             }
             else
-                OverlayHelper.Instance.AddOverlayMessage("updateError", new Notification("Network Error: Could not check for newer versions"));
+                OverlayHelper.Instance.AddOverlayMessage("updateError", new UI.Notification("Network Error: Could not check for newer versions"));
             settings.SetLastUpdateChecked(DateTime.Now);
             await settings.SaveAsync();
         }

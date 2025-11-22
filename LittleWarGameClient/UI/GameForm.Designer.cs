@@ -1,6 +1,6 @@
 ﻿using System.Drawing.Text;
 
-namespace LittleWarGameClient
+namespace LittleWarGameClient.UI
 {
     partial class GameForm
     {
