@@ -95,7 +95,7 @@ jobs:
     - name: Install .NET Core
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 6.0.x
+        dotnet-version: 8.0.x
 
     # Add  MSBuild to the PATH: https://github.com/microsoft/setup-msbuild
     - name: Setup MSBuild.exe
@@ -123,7 +123,7 @@ jobs:
     - name: Zip complete build artifacts
       uses: vimtor/action-zip@v1.2
       with:
-        files: ${{ env.Wap_Project_Directory }}\bin\${{ env.Platform }}\${{ env.Configuration }}\net6.0-windows7.0\win-${{ env.Platform }}\publish
+        files: ${{ env.Wap_Project_Directory }}\bin\${{ env.Platform }}\${{ env.Configuration }}\net8.0-windows\win-${{ env.Platform }}\publish
         dest: lwg_client${{ env.Platform }}.zip
       env:
         Configuration: ${{ matrix.configuration }}
@@ -138,7 +138,7 @@ jobs:
         path: LittleWarGameClient.* plugins
       env:
         Platform: ${{ matrix.platform }}
-        PublishedDir: ${{ env.Wap_Project_Directory }}\bin\${{ matrix.platform }}\${{ matrix.configuration }}\net6.0-windows7.0\win-${{ matrix.platform }}\publish
+        PublishedDir: ${{ env.Wap_Project_Directory }}\bin\${{ matrix.platform }}\${{ matrix.configuration }}\net8.0-windows\win-${{ matrix.platform }}\publish
         
     - name: upload complete build artifact
       uses: actions/upload-release-asset@v1
@@ -156,7 +156,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.TOKEN }}
         Platform: ${{ matrix.platform }}
-        PublishedDir: ${{ env.Wap_Project_Directory }}\bin\${{ matrix.platform }}\${{ matrix.configuration }}\net6.0-windows7.0\win-${{ matrix.platform }}\publish
+        PublishedDir: ${{ env.Wap_Project_Directory }}\bin\${{ matrix.platform }}\${{ matrix.configuration }}\net8.0-windows\win-${{ matrix.platform }}\publish
       with:
         upload_url: ${{ needs.prepare.outputs.outputUrl }}
         asset_path: ${{ env.PublishedDir }}\update_${{ env.Platform }}.zip
