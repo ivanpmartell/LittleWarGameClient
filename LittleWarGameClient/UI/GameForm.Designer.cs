@@ -133,6 +133,7 @@ namespace LittleWarGameClient.UI
             Deactivate += GameForm_Deactivate;
             FormClosing += GameForm_FormClosing;
             Load += GameForm_Load;
+            Resize += GameForm_Resize;
             ResizeBegin += GameForm_ResizeBegin;
             ResizeEnd += GameForm_ResizeEnd;
             LocationChanged += GameForm_LocationChanged;

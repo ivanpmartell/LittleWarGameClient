@@ -484,6 +484,13 @@ namespace LittleWarGameClient.UI
             }
         }
 
+		private void GameForm_Resize(object sender, EventArgs e)
+		{
+			GraphicsOverlay?.SetSizeTo(new Size(webBrowser.Size.Width, webBrowser.Size.Height - 1));
+			CaptureCursor();
+			ResizeGameWindows();
+		}
+
 		private void GameForm_ResizeBegin(object sender, EventArgs e)
 		{
 			SuspendLayout();
