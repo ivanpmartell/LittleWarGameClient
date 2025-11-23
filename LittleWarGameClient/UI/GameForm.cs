@@ -30,15 +30,33 @@ namespace LittleWarGameClient.UI
         private bool wasSmallWindow = false;
         private bool gameHasLoaded = false;
         private bool mouseLocked;
+        private CancellationTokenSource? _splashScreenCTS = null;
         
         internal IGraphicsOverlay? GraphicsOverlay { get; private set; } = null;
+		internal CancellationTokenSource SplashScreenCancellationTokenSource
+        {
+            get 
+            { 
+                if (_splashScreenCTS == null)
+                    _splashScreenCTS = new CancellationTokenSource();
+                return _splashScreenCTS;
+            }
+
+            set
+            {
+                if (_splashScreenCTS == null)
+					_splashScreenCTS = value;
+                else
+                    throw new InvalidOperationException("SplashScreen Token can only be set once.");
+            } 
+        }
 
 
 		private GameForm()
         {
-            PreInitWeb(WindowHandler.Instance.ExeDirectory);
+            PreInitWeb(ProcessHelper.Instance.ExeDirectory);
             InitializeComponent();
-            Text = WindowHandler.Instance.MainWindowTitle;
+            Text = ProcessHelper.Instance.MainWindowTitle;
             InitOverlay();
             InitLoadingScreen();
             audioHandler = new AudioHandler(Text);
@@ -47,7 +65,6 @@ namespace LittleWarGameClient.UI
             pluginHandler = new PluginHandler(settings);
             InitScreen();
             InitWebView();
-			SplashScreen.Instance.CloseSplashScreen();
 		}
 
         private void InitOverlay()
@@ -79,7 +96,7 @@ namespace LittleWarGameClient.UI
             cefSettings.CefCommandLineArgs.Add("no-proxy-server", "1");
             cefSettings.CefCommandLineArgs.Add("disable-plugins-discovery", "1");
             cefSettings.CefCommandLineArgs.Add("disable-extensions", "1");
-            cefSettings.RootCachePath = Path.Join(exeDirectory, "data", WindowHandler.Instance.Profile);
+            cefSettings.RootCachePath = Path.Join(exeDirectory, "data", ProcessHelper.Instance.Profile);
             Cef.Initialize(cefSettings);
         }
 
@@ -411,6 +428,7 @@ namespace LittleWarGameClient.UI
 
         private void GameForm_Load(object sender, EventArgs e)
         {
+            SplashScreenCancellationTokenSource.Cancel();
 			var webViewBounds = new Rectangle(webBrowser.PointToScreen(Point.Empty), webBrowser.Size);
 
 			GraphicsOverlay?.SetLocationTo(webViewBounds.Location);

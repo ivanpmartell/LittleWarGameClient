@@ -40,7 +40,7 @@ namespace LittleWarGameClient.Helpers
 			messageTimer = new PeriodicTimer(TimeSpan.FromSeconds(1));
 			overlayNotificationsTask = RunMessagingAsync();
 
-            if (WindowHandler.Instance.SteamOverlayModule != null)
+            if (ProcessHelper.Instance.SteamOverlayModule != null)
             {
                 steamOverlayTimer = new PeriodicTimer(TimeSpan.FromMilliseconds(250));
                 steamOverlayTask = RunSteamOverlayVerificationAsync();
@@ -87,9 +87,9 @@ namespace LittleWarGameClient.Helpers
 			bool prevOverlayActivationStatus = IsSteamOverlayActivated;
             while (await steamOverlayTimer.WaitForNextTickAsync())
             {
-				if (WindowHandler.Instance.SteamOverlayModule != null)
+				if (ProcessHelper.Instance.SteamOverlayModule != null)
 				{
-					var loadedSteamOverlayModule = WindowHandler.Instance.SteamOverlayModule.ModuleName;
+					var loadedSteamOverlayModule = ProcessHelper.Instance.SteamOverlayModule.ModuleName;
                     if (CallSteamOverlayFunction<bool>("IsOverlayEnabled", typeof(IsClause)))
                     {
 
@@ -135,11 +135,11 @@ namespace LittleWarGameClient.Helpers
 
 		private OutType? CallSteamOverlayFunction<OutType>(string name, Type delegateType)
         {
-			if (WindowHandler.Instance.SteamOverlayModule == null)
+			if (ProcessHelper.Instance.SteamOverlayModule == null)
                 return default;
 
 			if (steamOverlayModulePtr == IntPtr.Zero)
-				steamOverlayModulePtr = LoadLibrary(WindowHandler.Instance.SteamOverlayModule.ModuleName);
+				steamOverlayModulePtr = LoadLibrary(ProcessHelper.Instance.SteamOverlayModule.ModuleName);
 			
 			if (!steamOverlayFunctions.ContainsKey(name)) {
 				IntPtr funcPtr = GetProcAddress(steamOverlayModulePtr, name);

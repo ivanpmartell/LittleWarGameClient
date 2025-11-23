@@ -1,123 +1,116 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
+using LittleWarGameClient.Helpers;
 using LittleWarGameClient.UI;
 
-namespace LittleWarGameClient.Handlers;
-
-internal sealed class WindowHandler
+namespace LittleWarGameClient.Handlers
 {
-	private static readonly Lazy<WindowHandler> _instance = new(() => new WindowHandler());
-	internal static WindowHandler Instance
+	internal class WindowHandler
 	{
-		get { return _instance.Value; }
-	}
+		[DllImport("user32.dll")]
+		private static extern void SetForegroundWindow(IntPtr hWnd);
 
-	internal readonly string MainWindowTitle;
-	internal readonly string Profile;
-	internal readonly string ExeDirectory;
-	internal readonly ProcessModule? SteamOverlayModule;
+		[DllImport("user32.dll")]
+		private static extern void GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
 
-	private bool? _doubleInstance = null;
+		[DllImport("user32.dll")]
+		private static extern void EnumWindows(CallBackPtr lpEnumFunc, IntPtr lParam);
 
-	internal bool IsDoubleInstance
-	{	get
+		private delegate bool CallBackPtr(IntPtr hwnd, int lParam);
+		private readonly CallBackPtr callBackPtr;
+
+		private List<ProcessInfo> _WindowStructList = new();
+
+		private struct ProcessInfo
 		{
-			if (_doubleInstance == null)
-			{
-				_doubleInstance = DoesTwinProcessExist();
-				return _doubleInstance.Value;
-			}
-			return _doubleInstance.Value;
+			internal string? WindowTitle;
+			internal IntPtr MainWindowHandle;
 		}
-	}
 
-	[DllImport("user32.dll")]
-	private static extern void SetForegroundWindow(IntPtr hWnd);
-
-	[DllImport("user32.dll")]
-	private static extern void GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
-
-	[DllImport("user32.dll")]
-	private static extern void EnumWindows(CallBackPtr lpEnumFunc, IntPtr lParam);
-
-
-	private delegate bool CallBackPtr(IntPtr hwnd, int lParam);
-	private readonly CallBackPtr callBackPtr;
-
-	private List<ProcessInfo> _WindowStructList = new();
-
-	private struct ProcessInfo
-	{
-		internal string? WindowTitle;
-		internal IntPtr MainWindowHandle;
-	}
-
-	private WindowHandler()
-	{
-		Profile = new ArgumentsHandler().GetProfileArgumentOrDefault();
-		MainWindowTitle = $"Littlewargame({Profile})";
-		ExeDirectory = Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath)!;
-		callBackPtr = AddProcessWindowInfoToList;
-
-		Process currentProcess = Process.GetCurrentProcess();
-		var loadedModules = currentProcess.Modules;
-		SteamOverlayModule = currentProcess.Modules.Cast<ProcessModule>()
-			.FirstOrDefault(m => m.ModuleName.StartsWith("GameOverlayRenderer", StringComparison.OrdinalIgnoreCase));
-	}
-
-	internal void ShowSplashScreen()
-	{
-		Thread splashthread = new(() => SplashScreen.Instance.ShowDialog());
-		splashthread.IsBackground = true;
-		splashthread.SetApartmentState(ApartmentState.STA);
-		splashthread.Start();
-	}
-
-	internal void CloseSplashScreen()
-	{
-		SplashScreen.Instance.CloseSplashScreen();
-	}
-
-	internal void ShowOriginalMainWindow()
-	{
-		Process current = Process.GetCurrentProcess();
-		foreach (Process process in Process.GetProcessesByName(current.ProcessName))
+		public WindowHandler()
 		{
-			if (process.Id == current.Id)
-				continue;
+			callBackPtr = AddProcessWindowInfoToList;
+		}
 
-			var clientWindows = GetProcessMainWindow(process.Handle).Where(window => window.WindowTitle == MainWindowTitle);
-			if (clientWindows.Any())
+		internal void RunApplication(Action<CancellationTokenSource> action)
+		{
+			var cts = new CancellationTokenSource();
+			var ct = cts.Token;
+			ShowSplashScreen(ct);
+			using (Mutex mutex = new(true, $"Global\\LittleWarGameClient_{ProcessHelper.Instance.Profile}"))
 			{
-				var clientMainWindow = clientWindows.First();
-				SetForegroundWindow(clientMainWindow.MainWindowHandle);
-				break;
+				var hasHandle = false;
+				try
+				{
+					try
+					{
+						hasHandle = mutex.WaitOne(1000, false);
+						if (hasHandle == false)
+						{
+							ShowOriginalMainWindow();
+							cts.Cancel();
+						}
+						else
+						{
+							action.Invoke(cts);
+						}
+					}
+					catch (AbandonedMutexException)
+					{
+						hasHandle = true;
+					}
+				}
+				finally
+				{
+					if (hasHandle)
+					{
+						mutex.ReleaseMutex();
+					}
+				}
 			}
 		}
-	}
 
-	private List<ProcessInfo> GetProcessMainWindow(IntPtr processHandle)
-	{
-		_WindowStructList = new List<ProcessInfo>();
-		EnumWindows(callBackPtr, processHandle);
-		return _WindowStructList;
-	}
+		private void ShowSplashScreen(CancellationToken ct)
+		{
+			Thread splashScreenThread = new(() => new SplashScreen(ct).ShowDialog());
+			splashScreenThread.IsBackground = true;
+			splashScreenThread.SetApartmentState(ApartmentState.STA);
+			splashScreenThread.Start();
+		}
 
-	private bool DoesTwinProcessExist()
-	{
-		using Mutex mutex = new(true, $"Global\\LittleWarGameClient_{Profile}", out bool createdNew);
-		if (createdNew)
-			return false;
-		return true;
-	}
+		private void ShowOriginalMainWindow()
+		{
+			Process current = Process.GetCurrentProcess();
+			foreach (Process process in Process.GetProcessesByName(current.ProcessName))
+			{
+				if (process.Id == current.Id)
+					continue;
 
-	private bool AddProcessWindowInfoToList(IntPtr hWnd, int lparam)
-	{
-		StringBuilder sb = new(256);
-		GetWindowText(hWnd, sb, 256);
-		if (sb.Length > 0)
-			_WindowStructList.Add(new ProcessInfo { MainWindowHandle = hWnd, WindowTitle = sb.ToString() });
-		return true;
+				var clientWindows = GetProcessMainWindow(process.Handle).Where(window => window.WindowTitle == ProcessHelper.Instance.MainWindowTitle);
+				if (clientWindows.Any())
+				{
+					var clientMainWindow = clientWindows.First();
+					SetForegroundWindow(clientMainWindow.MainWindowHandle);
+					break;
+				}
+			}
+		}
+
+		private List<ProcessInfo> GetProcessMainWindow(IntPtr processHandle)
+		{
+			_WindowStructList = new List<ProcessInfo>();
+			EnumWindows(callBackPtr, processHandle);
+			return _WindowStructList;
+		}
+
+		private bool AddProcessWindowInfoToList(IntPtr hWnd, int lparam)
+		{
+			StringBuilder sb = new(256);
+			GetWindowText(hWnd, sb, 256);
+			if (sb.Length > 0)
+				_WindowStructList.Add(new ProcessInfo { MainWindowHandle = hWnd, WindowTitle = sb.ToString() });
+			return true;
+		}
 	}
 }

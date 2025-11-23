@@ -21,7 +21,7 @@ namespace LittleWarGameClient.Handlers
         internal PluginHandler(SettingsHandler s)
         {
             settings = s;
-            pluginsDirectory = Path.Combine(WindowHandler.Instance.ExeDirectory, "plugins");
+            pluginsDirectory = Path.Combine(ProcessHelper.Instance.ExeDirectory, "plugins");
             enabledFilePath = Path.Combine(pluginsDirectory, "enabled.txt");
             localReleaseFile = Path.Combine(pluginsDirectory, "plugins.tar.gz");
             installedPlugins = ObtainInstalledPlugins();

@@ -1,4 +1,5 @@
 using LittleWarGameClient.Handlers;
+using LittleWarGameClient.Helpers;
 using LittleWarGameClient.UI;
 
 namespace LittleWarGameClient
@@ -8,17 +9,14 @@ namespace LittleWarGameClient
         [STAThread]
         static void Main()
         {
-			WindowHandler.Instance.ShowSplashScreen();
-			if (!WindowHandler.Instance.IsDoubleInstance)
-			{
-				ApplicationConfiguration.Initialize();
+            var windowHandler = new WindowHandler();
+
+			windowHandler.RunApplication((splashScreenCTS) =>
+            {
+                ApplicationConfiguration.Initialize();
+                GameForm.Instance.SplashScreenCancellationTokenSource = splashScreenCTS;
 				Application.Run(GameForm.Instance);
-			}
-			else
-			{
-				WindowHandler.Instance.CloseSplashScreen();
-				WindowHandler.Instance.ShowOriginalMainWindow();
-			}
+            });
 		}
     }
 }

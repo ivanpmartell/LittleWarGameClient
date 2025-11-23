@@ -2,44 +2,42 @@
 
 namespace LittleWarGameClient.UI
 {
-	public sealed partial class SplashScreen : Form
+	internal sealed partial class SplashScreen : Form
 	{
-		private static readonly SplashScreen _instance = new();
-		internal static SplashScreen Instance
+		private readonly CancellationToken _token;
+		internal SplashScreen(CancellationToken ct)
 		{
-			get { return _instance; }
-		}
+			_token = ct;
 
-		private SplashScreen()
-		{
 			//Load resources as early as possible before initialisation
 			var gameFont = FontHandler.gameFont(24F);
 			var soldierImage = Properties.Resources.soldier;
 			InitializeComponent();
 			splashText.Font = gameFont;
 			pictureBox1.Image = soldierImage;
+			ct.Register(CloseSplashScreen);
 		}
 
-		internal void InvokeUI(Action action)
+		private void SplashScreen_Load(object sender, EventArgs e)
 		{
-			if (Instance.InvokeRequired)
-			{
-				if (Instance.IsHandleCreated)
-					Instance.BeginInvoke(new MethodInvoker(action));
-			}
-			else
-			{
-				action.Invoke();
-			}
-		}
-
-		internal void CloseSplashScreen()
-		{
-			InvokeUI(() =>
+			if (_token.IsCancellationRequested)
 			{
 				Close();
-				Dispose();
-			});
+			}
+		}
+
+		private void CloseSplashScreen()
+		{
+			if (Application.OpenForms.OfType<SplashScreen>().Any())
+			{
+				if (InvokeRequired)
+				{
+					if (IsHandleCreated)
+						BeginInvoke(Close);
+				}
+				else
+					Close();
+			}
 		}
 	}
 }

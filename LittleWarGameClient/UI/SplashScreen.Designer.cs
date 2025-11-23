@@ -62,9 +62,9 @@
 			// panel1
 			// 
 			panel1.BackColor = Color.Black;
-			panel1.ForeColor = Color.Black;
 			panel1.Controls.Add(pictureBox1);
 			panel1.Controls.Add(splashText);
+			panel1.ForeColor = Color.Black;
 			panel1.Location = new Point(0, 0);
 			panel1.Name = "panel1";
 			panel1.Size = new Size(400, 150);
@@ -83,6 +83,7 @@
 			Name = "SplashScreen";
 			StartPosition = FormStartPosition.CenterScreen;
 			Text = "Littlewargame";
+			Load += SplashScreen_Load;
 			((System.ComponentModel.ISupportInitialize)pictureBox1).EndInit();
 			panel1.ResumeLayout(false);
 			panel1.PerformLayout();

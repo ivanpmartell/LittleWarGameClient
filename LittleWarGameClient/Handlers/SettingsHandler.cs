@@ -34,7 +34,7 @@ namespace LittleWarGameClient.Handlers
             var settingsDirectory = "settings";
             if (!Directory.Exists(settingsDirectory))
                 Directory.CreateDirectory(settingsDirectory);
-            fileName = Path.Join(settingsDirectory, $"{WindowHandler.Instance.Profile}.ini");
+            fileName = Path.Join(settingsDirectory, $"{ProcessHelper.Instance.Profile}.ini");
             if (!File.Exists(fileName))
                 settings = CreateDefaultIniFile();
             else
