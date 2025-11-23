@@ -18,9 +18,11 @@ internal sealed class ProcessHelper
 	private ProcessHelper()
 	{
 		Profile = new ArgumentsHandler().GetProfileArgumentOrDefault();
-		MainWindowTitle = $"Littlewargame({Profile})";
+		if (!Profile.All(Char.IsLetterOrDigit))
+			throw new InvalidDataException("Profile can only contain letters or digits");
 
-		ExeDirectory = Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath)!;
+		MainWindowTitle = $"Littlewargame({Profile})";
+		ExeDirectory = Path.GetDirectoryName(Application.ExecutablePath)!;
 
 		Process currentProcess = Process.GetCurrentProcess();
 		var loadedModules = currentProcess.Modules;

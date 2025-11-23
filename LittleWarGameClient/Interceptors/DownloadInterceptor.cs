@@ -1,5 +1,6 @@
 ﻿using CefSharp;
 using CefSharp.Handler;
+using LittleWarGameClient.Handlers;
 using LittleWarGameClient.Helpers;
 using LittleWarGameClient.UI;
 
@@ -11,18 +12,17 @@ namespace LittleWarGameClient.Interceptors
         {
             if (!callback.IsDisposed)
             {
-                var path = Path.GetDirectoryName(Application.ExecutablePath);
                 using (callback)
                 {
-                    var downloadsDirPath = Path.Join(path, "downloads");
-                    var completePath = Path.Join(downloadsDirPath, downloadItem.SuggestedFileName);
+                    var downloadsDirPath = Path.Combine(ProcessHelper.Instance.ExeDirectory, "downloads", ProcessHelper.Instance.Profile);
+                    var completePath = Path.Combine(downloadsDirPath, downloadItem.SuggestedFileName);
                     var n = 0;
                     while (File.Exists(completePath))
                     {
                         n++;
                         var ext = Path.GetExtension(downloadItem.SuggestedFileName);
                         var filenameNoExt = Path.GetFileNameWithoutExtension(downloadItem.SuggestedFileName);
-                        completePath = Path.Join(downloadsDirPath, $"{filenameNoExt}({n}){ext}");
+                        completePath = Path.Combine(downloadsDirPath, $"{filenameNoExt}({n}){ext}");
                     }
                     callback.Continue(completePath, showDialog: false);
                     return true;

@@ -47,17 +47,17 @@
 
   <ItemGroup>
     <Content Include="Assets\logo.ico" />
-    <None Include="plugins\sample\sample.js">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    <None Include="plugins\main\sample\sample.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="plugins\sample\lwg.js">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    <None Include="plugins\main\sample\lwg.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="plugins\sample\plugin.txt">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    <None Include="plugins\main\sample\plugin.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="plugins\sample\plugin.png">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    <None Include="plugins\main\sample\plugin.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 

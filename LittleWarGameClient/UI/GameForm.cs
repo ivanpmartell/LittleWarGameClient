@@ -54,7 +54,7 @@ namespace LittleWarGameClient.UI
 
 		private GameForm()
         {
-            PreInitWeb(ProcessHelper.Instance.ExeDirectory);
+            PreInitWeb();
             InitializeComponent();
             Text = ProcessHelper.Instance.MainWindowTitle;
             InitOverlay();
@@ -90,13 +90,13 @@ namespace LittleWarGameClient.UI
             loadingPanel.BringToFront();
         }
 
-        private void PreInitWeb(string? exeDirectory)
+        private void PreInitWeb()
         {
             var cefSettings = new CefSettings();
             cefSettings.CefCommandLineArgs.Add("no-proxy-server", "1");
             cefSettings.CefCommandLineArgs.Add("disable-plugins-discovery", "1");
             cefSettings.CefCommandLineArgs.Add("disable-extensions", "1");
-            cefSettings.RootCachePath = Path.Join(exeDirectory, "data", ProcessHelper.Instance.Profile);
+            cefSettings.RootCachePath = Path.Combine(ProcessHelper.Instance.ExeDirectory, "data", ProcessHelper.Instance.Profile);
             Cef.Initialize(cefSettings);
         }
 

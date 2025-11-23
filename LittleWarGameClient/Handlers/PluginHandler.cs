@@ -11,7 +11,7 @@ namespace LittleWarGameClient.Handlers
     internal class PluginHandler
     {
         private readonly SettingsHandler settings;
-        private readonly string pluginsDirectory;
+        private readonly string profilePluginsDirectory;
         private readonly string enabledFilePath;
         private readonly string localReleaseFile;
         private readonly HashSet<string> enabledPlugins = new();
@@ -21,8 +21,15 @@ namespace LittleWarGameClient.Handlers
         internal PluginHandler(SettingsHandler s)
         {
             settings = s;
-            pluginsDirectory = Path.Combine(ProcessHelper.Instance.ExeDirectory, "plugins");
-            enabledFilePath = Path.Combine(pluginsDirectory, "enabled.txt");
+            var pluginsDirectory = Path.Combine(ProcessHelper.Instance.ExeDirectory, "plugins");
+			if (!Directory.Exists(pluginsDirectory))
+				Directory.CreateDirectory(pluginsDirectory);
+
+			profilePluginsDirectory = Path.Combine(pluginsDirectory, ProcessHelper.Instance.Profile);
+			if (!Directory.Exists(profilePluginsDirectory))
+				Directory.CreateDirectory(profilePluginsDirectory);
+
+			enabledFilePath = Path.Combine(profilePluginsDirectory, "enabled.txt");
             localReleaseFile = Path.Combine(pluginsDirectory, "plugins.tar.gz");
             installedPlugins = ObtainInstalledPlugins();
         }
@@ -110,7 +117,7 @@ namespace LittleWarGameClient.Handlers
         {
             DisableAPlugin(id);
             installedPlugins.Remove(id);
-            string pluginPath = Path.Combine(pluginsDirectory, id);
+            string pluginPath = Path.Combine(profilePluginsDirectory, id);
             if (Directory.Exists(pluginPath))
                 Directory.Delete(pluginPath, true);
         }
@@ -132,7 +139,7 @@ namespace LittleWarGameClient.Handlers
 
         private Dictionary<string, Plugin> ObtainInstalledPlugins()
         {
-            string[] pluginDirs = Directory.GetDirectories(pluginsDirectory);
+            string[] pluginDirs = Directory.GetDirectories(profilePluginsDirectory);
             Dictionary<string, Plugin> plugins = new();
             foreach (string pluginDir in pluginDirs)
             {
@@ -144,7 +151,7 @@ namespace LittleWarGameClient.Handlers
 
         private async Task<string?> InstallPluginAsync(string id)
         {
-            string pluginPath = Path.Combine(pluginsDirectory, id);
+            string pluginPath = Path.Combine(profilePluginsDirectory, id);
             bool releaseFileObtained = await LatestPluginsReleaseFileDownloaded();
             if (releaseFileObtained)
             {
@@ -213,7 +220,7 @@ namespace LittleWarGameClient.Handlers
                     while ((line = reader.ReadLine()) != null)
                     {
                         line = line.Trim();
-                        string pluginFolder = Path.Combine(pluginsDirectory, line);
+                        string pluginFolder = Path.Combine(profilePluginsDirectory, line);
                         if (installedPlugins.ContainsKey(line))
                         {
                             installedPlugins[line].Enabled = true;
